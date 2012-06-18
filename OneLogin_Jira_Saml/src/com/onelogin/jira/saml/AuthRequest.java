@@ -1,6 +1,7 @@
 package com.onelogin.jira.saml;
 
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.nio.charset.Charset;
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -24,11 +25,15 @@ public class AuthRequest {
 		issueInstant = simpleDf.format(new Date());		
 	}
 
-	public String getRequest(int format) throws XMLStreamException {
-		ByteArrayOutputStream baos = new ByteArrayOutputStream();		
+	public String getRequest(int format) throws XMLStreamException, IOException {
+		
+		ByteArrayOutputStream baos = new ByteArrayOutputStream();	
+		String sBaos = "";
+		
+		/*
 		XMLOutputFactory factory = XMLOutputFactory.newInstance();
 		XMLStreamWriter writer = factory.createXMLStreamWriter(baos);
-
+		
 		writer.writeStartElement("samlp", "AuthnRequest", "urn:oasis:names:tc:SAML:2.0:protocol");
 		writer.writeNamespace("samlp","urn:oasis:names:tc:SAML:2.0:protocol");
 
@@ -61,7 +66,19 @@ public class AuthRequest {
 
 		writer.writeEndElement();
 		writer.flush();		
+		*/
+		
+		sBaos = "<samlp:AuthnRequest xmlns:samlp='urn:oasis:names:tc:SAML:2.0:protocol' ID='" + id + "' Version='2.0' IssueInstant='" + this.issueInstant + "' ProtocolBinding='urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST' AssertionConsumerServiceURL='" + this.appSettings.getAssertionConsumerServiceUrl() + "'>"
+				+ "<saml:Issuer xmlns:saml='urn:oasis:names:tc:SAML:2.0:assertion'>" + this.appSettings.getIssuer() + "</saml:Issuer>"
+				+ "<samlp:NameIDPolicy Format='urn:oasis:names:tc:SAML:2.0:nameid-format:unspecified' AllowCreate='true'>"
+				+ "</samlp:NameIDPolicy>"
+				+ "<samlp:RequestedAuthnContext Comparison='exact'>"
+				+ "</samlp:RequestedAuthnContext>"
+				+ "<saml:AuthnContextClassRef xmlns:saml='urn:oasis:names:tc:SAML:2.0:assertion'>urn:oasis:names:tc:SAML:2.0:ac:classes:PasswordProtectedTransport</saml:AuthnContextClassRef>"
+				+ "</samlp:AuthnRequest>";
 
+		baos.write(sBaos.getBytes());
+		
 		if (format == base64) {
 			byte [] encoded = Base64.encodeBase64Chunked(baos.toByteArray());
 			String result = new String(encoded,Charset.forName("UTF-8"));
@@ -93,6 +110,5 @@ public class AuthRequest {
 			index = what.indexOf(now);
 		}
 		return r.toString();
-	}		
-
+	}
 }
