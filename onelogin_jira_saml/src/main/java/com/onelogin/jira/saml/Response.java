@@ -67,4 +67,18 @@ public class Response {
 
 		return nodes.item(0).getTextContent();
 	}
+        
+        
+        public String getIssuer() throws Exception {
+		NodeList nodes = xmlDoc.getElementsByTagNameNS("urn:oasis:names:tc:SAML:2.0:assertion", "Issuer");		
+
+		if(nodes.getLength()==0){
+			throw new Exception("No issuer found in document");
+		}		
+
+		return nodes.item(0).getTextContent();
+	}
+        
+        
+        
 }

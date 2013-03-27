@@ -1,26 +1,24 @@
 package com.onelogin.jira.saml;
 
-import javax.xml.parsers.DocumentBuilderFactory;
-import java.io.*;
-import java.net.URL;
-import org.w3c.dom.*;
-import javax.xml.parsers.DocumentBuilderFactory;
+import java.io.File;
 import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
 import org.xml.sax.SAXException;
 import org.xml.sax.SAXParseException;
-import javax.xml.transform.*;
-import javax.xml.transform.dom.*;
-import javax.xml.transform.stream.*;
 
 public class XmlUtil {
     public XmlUtil() {
     }
 
     public static void main(String[] argv) {
-        // XmlUtil xm = new XmlUtil();
-        // String sFile = "c:\\temp\\jira_onelogin.xml";
-    	// String sFile = "jira_onelogin.xml";
-    	// String s = xm.getConfigs(sFile);
+         /*XmlUtil xm = new XmlUtil();
+         String sFile = "c:\\temp\\jira_onelogin.xml";
+    	 String sFile = "/home/rogeliosevilla1/jira_onelogin.xml";
+    	 String s = xm.getConfigs(sFile); */
     }
 
     public String getConfigs(String sFile) {
