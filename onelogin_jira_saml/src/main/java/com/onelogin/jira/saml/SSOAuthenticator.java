@@ -58,12 +58,22 @@ public class SSOAuthenticator extends DefaultAuthenticator {
                         final String nameId = samlResponse.getNameId();
 
                         user = getUser(nameId);
-
+                        
+                        String principalName = null;
+                        if(user!=null)
+                            principalName = user.getName();
+                        
                         putPrincipalInSessionContext(request, user);
-                        getElevatedSecurityGuard().onSuccessfulLoginAttempt(request, nameId);
+                        
+                        if(principalName!=null)
+                            getElevatedSecurityGuard().onSuccessfulLoginAttempt(request, principalName);
 
                         request.getSession().setAttribute(DefaultAuthenticator.LOGGED_IN_KEY, user);
                         request.getSession().setAttribute(DefaultAuthenticator.LOGGED_OUT_KEY, null);
+                        
+                        if(user!=null)
+                            response.sendRedirect("/secure/Dashboard.jspa");
+
                     } else {
                         log.error("SAML Response is not valid");
                     }
