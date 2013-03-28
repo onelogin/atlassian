@@ -143,7 +143,6 @@ public class SSOAuthenticator extends DefaultAuthenticator {
 
     @Override
     protected boolean authenticate(Principal prncpl, String string) throws AuthenticatorException {
-        log.info("entre a authenticate!!");
         return false;
     }
 }
