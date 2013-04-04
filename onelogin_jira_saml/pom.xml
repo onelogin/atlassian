@@ -7,7 +7,7 @@
   <version>0.4</version>
   <packaging>jar</packaging>
 
-  <name>onelogin_jira_plugin</name>
+  <name>onelogin_jira_saml</name>
   <url>http://maven.apache.org</url>
 
   <properties>

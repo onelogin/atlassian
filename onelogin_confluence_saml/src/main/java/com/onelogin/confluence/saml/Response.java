@@ -4,6 +4,10 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.TimeZone;
 import javax.xml.crypto.dsig.XMLSignature;
 import javax.xml.crypto.dsig.XMLSignatureFactory;
 import javax.xml.crypto.dsig.dom.DOMValidateContext;
@@ -55,6 +59,9 @@ public class Response {
 		XMLSignatureFactory sigF = XMLSignatureFactory.getInstance("DOM");
 		XMLSignature xmlSignature = sigF.unmarshalXMLSignature(ctx);
 
+                if (!isAllowedDate())
+                	return false;
+                
 		return xmlSignature.validate(ctx);
 	}
 
@@ -67,4 +74,31 @@ public class Response {
 
 		return nodes.item(0).getTextContent();
 	}
+        
+        
+    public boolean isAllowedDate() throws Exception {
+        NodeList confirmationData = xmlDoc.getElementsByTagNameNS("urn:oasis:names:tc:SAML:2.0:assertion", "Conditions");
+        if (confirmationData.getLength() == 0) {
+            throw new Exception("No conditions were found in document");
+        }
+
+        DateFormat m_ISO8601Local = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
+        m_ISO8601Local.setTimeZone(TimeZone.getTimeZone("UTC"));
+
+        Date now = new Date();
+        Date notBeforeTime = m_ISO8601Local.parse(confirmationData.item(0).
+                getAttributes().
+                getNamedItem("NotBefore").
+                getNodeValue());
+
+        Date notOnOrAfterTime = m_ISO8601Local.parse(confirmationData.item(0).
+                getAttributes().
+                getNamedItem("NotOnOrAfter").
+                getNodeValue());
+
+        return (now.after(notBeforeTime) && now.before(notOnOrAfterTime));
+    }
+        
+        
+        
 }
