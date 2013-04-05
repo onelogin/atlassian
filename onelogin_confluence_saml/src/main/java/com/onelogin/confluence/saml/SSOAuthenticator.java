@@ -2,6 +2,7 @@ package com.onelogin.confluence.saml;
 
 import com.atlassian.confluence.event.events.security.LoginEvent;
 import com.atlassian.confluence.user.ConfluenceAuthenticator;
+import com.atlassian.seraph.auth.AuthenticatorException;
 import com.atlassian.seraph.auth.DefaultAuthenticator;
 import com.atlassian.seraph.auth.LoginReason;
 import java.io.IOException;
@@ -129,4 +130,9 @@ public class SSOAuthenticator extends ConfluenceAuthenticator {
     }
 
 
+    @Override
+    protected boolean authenticate(Principal prncpl, String string) throws AuthenticatorException {
+        return false;
+    }
+    
 }
