@@ -59,8 +59,8 @@ public class SSOAuthenticator extends DefaultAuthenticator {
                         request.getSession().setAttribute(DefaultAuthenticator.LOGGED_IN_KEY, user);
                         request.getSession().setAttribute(DefaultAuthenticator.LOGGED_OUT_KEY, null);
                         
-                        if(user!=null)
-                            response.sendRedirect("/secure/Dashboard.jspa");
+//                        if(user!=null && !response.isCommitted())
+//                            response.sendRedirect("/secure/Dashboard.jspa");                            
 
                     } else {
                         log.error("SAML Response is not valid");
