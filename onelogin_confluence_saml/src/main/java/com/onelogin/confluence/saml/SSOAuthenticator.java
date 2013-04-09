@@ -62,8 +62,8 @@ public class SSOAuthenticator extends ConfluenceAuthenticator {
                     request.getSession().setAttribute(DefaultAuthenticator.LOGGED_OUT_KEY, null);
 
                     
-                    if(user!=null)
-                            response.sendRedirect("/dashboard.action");
+                    if(user!=null && !response.isCommitted())
+                            response.sendRedirect("/dashboard.action");                            
                     
                 } else {
                     log.error("SAML Response is not valid");
