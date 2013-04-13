@@ -31,6 +31,8 @@ public class SSOAuthenticator extends DefaultAuthenticator {
         Principal user = null;
         HashMap<String,String> configValues = getConfigurationValues("jira_onelogin.xml");
         String sSAMLResponse = request.getParameter("SAMLResponse");
+        final String remoteIP = request.getRemoteAddr();
+        final String remoteHost = request.getRemoteHost();
 
         try {
                 if (sSAMLResponse != null) {
@@ -44,20 +46,16 @@ public class SSOAuthenticator extends DefaultAuthenticator {
                     if (samlResponse.isValid()) {
                         // The signature of the SAML Response is valid. The source is trusted
                         final String nameId = samlResponse.getNameId();
-
                         user = getUser(nameId);
                         
-                        String principalName = null;
-                        if(user!=null)
-                            principalName = user.getName();
-                        
-                        putPrincipalInSessionContext(request, user);
-                        
-                        if(principalName!=null)
-                            getElevatedSecurityGuard().onSuccessfulLoginAttempt(request, principalName);
-
-                        request.getSession().setAttribute(DefaultAuthenticator.LOGGED_IN_KEY, user);
-                        request.getSession().setAttribute(DefaultAuthenticator.LOGGED_OUT_KEY, null);
+                        if(user!=null){
+                            putPrincipalInSessionContext(request, user);
+                            getElevatedSecurityGuard().onSuccessfulLoginAttempt(request, nameId);
+                            request.getSession().setAttribute(DefaultAuthenticator.LOGGED_IN_KEY, user);
+                            request.getSession().setAttribute(DefaultAuthenticator.LOGGED_OUT_KEY, null);
+                        }else{
+                            getElevatedSecurityGuard().onFailedLoginAttempt(request, nameId);
+                        }
                         
 //                        if(user!=null && !response.isCommitted())
 //                            response.sendRedirect("/secure/Dashboard.jspa");                            
@@ -131,26 +129,10 @@ public class SSOAuthenticator extends DefaultAuthenticator {
     
     @Override
     protected Principal getUser(String username) {
-        /*
-         * exception thrown on version 4.4.4
-         * com.atlassian.crowd.embedded.ofbiz.OfBizUser cannot be cast to
-         * com.opensymphony.user.User 
-         * 
-         * the principal returned should be of type
-         * com.opensymphony.user.User
-         */
-
-        User user = UserUtils.getUser(username);
-        user = (user != null) ? user : UserUtils.getUserByEmail(username);
-        if (user == null) {
-            log.error("username: " + username + "could not be found!!");
-            return null;
-        }
-
         com.opensymphony.user.User symphonyUser = null;
         UserManager userManager = new com.opensymphony.user.UserManager();
         try {
-            symphonyUser = userManager.getUser(user.getName());
+            symphonyUser = userManager.getUser(username);
         } catch (EntityNotFoundException ex) {
             log.error("could not retrieve opensymphony user, entity was not found");
         }

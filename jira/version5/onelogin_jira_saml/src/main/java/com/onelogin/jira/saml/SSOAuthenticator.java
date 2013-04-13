@@ -1,6 +1,8 @@
 package com.onelogin.jira.saml;
 
 import com.atlassian.crowd.embedded.api.User;
+import com.atlassian.jira.bc.security.login.LoginReason;
+import com.atlassian.jira.event.user.LoginEvent;
 import com.atlassian.jira.user.UserUtils;
 import com.atlassian.seraph.auth.AuthenticatorException;
 import com.atlassian.seraph.auth.DefaultAuthenticator;
@@ -29,7 +31,9 @@ public class SSOAuthenticator extends DefaultAuthenticator {
         Principal user = null;
         HashMap<String,String> configValues = getConfigurationValues("jira_onelogin.xml");
         String sSAMLResponse = request.getParameter("SAMLResponse");
-
+        final String remoteIP = request.getRemoteAddr();
+        final String remoteHost = request.getRemoteHost();
+        
         try {
                 if (sSAMLResponse != null) {
 
@@ -42,20 +46,16 @@ public class SSOAuthenticator extends DefaultAuthenticator {
                     if (samlResponse.isValid()) {
                         // The signature of the SAML Response is valid. The source is trusted
                         final String nameId = samlResponse.getNameId();
-
                         user = getUser(nameId);
-                        
-                        String principalName = null;
-                        if(user!=null)
-                            principalName = user.getName();
-                        
-                        putPrincipalInSessionContext(request, user);
-                        
-                        if(principalName!=null)
-                            getElevatedSecurityGuard().onSuccessfulLoginAttempt(request, principalName);
 
-                        request.getSession().setAttribute(DefaultAuthenticator.LOGGED_IN_KEY, user);
-                        request.getSession().setAttribute(DefaultAuthenticator.LOGGED_OUT_KEY, null);
+                        if(user!=null){
+                            putPrincipalInSessionContext(request, user);
+                            getElevatedSecurityGuard().onSuccessfulLoginAttempt(request, nameId);
+                            request.getSession().setAttribute(DefaultAuthenticator.LOGGED_IN_KEY, user);
+                            request.getSession().setAttribute(DefaultAuthenticator.LOGGED_OUT_KEY, null);
+                        }else{
+                            getElevatedSecurityGuard().onFailedLoginAttempt(request, nameId);
+                        }
                         
 //                        if(user!=null && !response.isCommitted())
 //                            response.sendRedirect("/secure/Dashboard.jspa");                            
@@ -130,11 +130,6 @@ public class SSOAuthenticator extends DefaultAuthenticator {
     @Override
     protected Principal getUser(String username) {
         User user = UserUtils.getUser(username);
-        user = (user != null) ? user : UserUtils.getUserByEmail(username);
-        if (user == null) {
-            log.error("username: " + username + "could not be found!!");
-        }
-
         return user;
     }
 

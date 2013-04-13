@@ -1,6 +1,7 @@
 package com.onelogin.confluence.saml;
 
 import com.atlassian.confluence.event.events.security.LoginEvent;
+import com.atlassian.confluence.event.events.security.LoginFailedEvent;
 import com.atlassian.confluence.user.ConfluenceAuthenticator;
 import com.atlassian.seraph.auth.AuthenticatorException;
 import com.atlassian.seraph.auth.DefaultAuthenticator;
@@ -49,17 +50,19 @@ public class SSOAuthenticator extends ConfluenceAuthenticator {
                     String sNameId = samlResponse.getNameId();
                     user = getUser(sNameId);
 
-                    putPrincipalInSessionContext(request, user);
-                    
-                    if(user!=null)
+                    if(user!=null){
+                        putPrincipalInSessionContext(request, user);
                         getElevatedSecurityGuard().onSuccessfulLoginAttempt(request, sNameId);
-
-                    // Firing this event is necessary to ensure the user's personal information is initialized correctly.
-                    getEventPublisher().publish(new LoginEvent(this, sNameId, request.getSession().getId(), remoteHost, remoteIP));
-                    LoginReason.OK.stampRequestResponse(request, response);
-
-                    request.getSession().setAttribute(DefaultAuthenticator.LOGGED_IN_KEY, user);
-                    request.getSession().setAttribute(DefaultAuthenticator.LOGGED_OUT_KEY, null);
+                        LoginReason.OK.stampRequestResponse(request, response);
+                        // Firing this event is necessary to ensure the user's personal information is initialized correctly.
+                        getEventPublisher().publish(new LoginEvent(this, sNameId, request.getSession().getId(), remoteHost, remoteIP));
+                        request.getSession().setAttribute(DefaultAuthenticator.LOGGED_IN_KEY, user);
+                        request.getSession().setAttribute(DefaultAuthenticator.LOGGED_OUT_KEY, null);
+                    }else{
+                        getElevatedSecurityGuard().onFailedLoginAttempt(request, sNameId);
+                        getEventPublisher().publish(new LoginFailedEvent(this, sNameId, request.getSession().getId(), remoteHost, remoteIP));
+                        return null;
+                    }
 
                     
                     if(user!=null && !response.isCommitted())
