@@ -1,7 +1,5 @@
 package com.onelogin.jira.saml;
 
-import com.atlassian.crowd.embedded.api.User;
-import com.atlassian.jira.user.UserUtils;
 import com.atlassian.seraph.auth.AuthenticatorException;
 import com.atlassian.seraph.auth.DefaultAuthenticator;
 import com.opensymphony.user.EntityNotFoundException;
@@ -31,8 +29,6 @@ public class SSOAuthenticator extends DefaultAuthenticator {
         Principal user = null;
         HashMap<String,String> configValues = getConfigurationValues("jira_onelogin.xml");
         String sSAMLResponse = request.getParameter("SAMLResponse");
-        final String remoteIP = request.getRemoteAddr();
-        final String remoteHost = request.getRemoteHost();
 
         try {
                 if (sSAMLResponse != null) {
