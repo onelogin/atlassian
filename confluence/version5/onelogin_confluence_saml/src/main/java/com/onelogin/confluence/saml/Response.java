@@ -2,6 +2,7 @@ package com.onelogin.confluence.saml;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.lang.reflect.Method;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.text.DateFormat;
@@ -16,6 +17,8 @@ import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 import org.apache.commons.codec.binary.Base64;
 import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.xml.sax.SAXException;
 
@@ -43,7 +46,7 @@ public class Response {
 	public void loadXmlFromBase64(String response) throws ParserConfigurationException, SAXException, IOException {
 		Base64 base64 = new Base64();
 		byte [] decodedB = base64.decode(response);		
-		String decodedS = new String(decodedB);				
+		String decodedS = new String(decodedB);
 		loadXml(decodedS);	
 	}
 
@@ -54,6 +57,10 @@ public class Response {
 			throw new Exception("Can't find signature in document.");
 		}
 
+                if(setIdAttributeExists()) {
+                  tagIdAttributes(xmlDoc);
+                }
+                
 		X509Certificate cert = certificate.getX509Cert();		
 		DOMValidateContext ctx = new DOMValidateContext(cert.getPublicKey() , nodes.item(0));				
 		XMLSignatureFactory sigF = XMLSignatureFactory.getInstance("DOM");
@@ -98,7 +105,27 @@ public class Response {
 
         return (now.after(notBeforeTime) && now.before(notOnOrAfterTime));
     }
-        
-        
-        
+     
+    
+    private void tagIdAttributes(Document xmlDoc) {
+            NodeList nodeList = xmlDoc.getElementsByTagName("*");
+            for (int i = 0; i < nodeList.getLength(); i++) {
+                Node node = nodeList.item(i);
+                if (node.getNodeType() == Node.ELEMENT_NODE) {
+                    if (node.getAttributes().getNamedItem("ID") != null) {
+                        ((Element) node).setIdAttribute("ID", true);
+                    }
+                }
+            }
+        }
+    
+    private boolean setIdAttributeExists() {
+            for (Method method : Element.class.getDeclaredMethods()) {
+                if (method.getName().equals("setIdAttribute")) {
+                    return true;
+                }
+            }
+            return false;
+        }
+                
 }

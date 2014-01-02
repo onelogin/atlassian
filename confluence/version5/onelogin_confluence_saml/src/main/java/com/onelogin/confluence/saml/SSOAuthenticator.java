@@ -54,6 +54,7 @@ public class SSOAuthenticator extends ConfluenceAuthenticator {
                     user = getUser(sNameId);
                     
                     if(user!=null){
+                        log.info("login from user: "+sNameId );
                         putPrincipalInSessionContext(request, user);
                         getElevatedSecurityGuard().onSuccessfulLoginAttempt(request, sNameId);
                         LoginReason.OK.stampRequestResponse(request, response);
@@ -62,6 +63,7 @@ public class SSOAuthenticator extends ConfluenceAuthenticator {
                         request.getSession().setAttribute(DefaultAuthenticator.LOGGED_IN_KEY, user);
                         request.getSession().setAttribute(DefaultAuthenticator.LOGGED_OUT_KEY, null);
                     }else{
+                        log.error("user: "+sNameId+" could not be found");
                         getElevatedSecurityGuard().onFailedLoginAttempt(request, sNameId);
                         getEventPublisher().publish(new LoginFailedEvent(this, sNameId, request.getSession().getId(), remoteHost, remoteIP));
                         return null;
