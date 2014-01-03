@@ -3,9 +3,30 @@ package com.onelogin.confluence.saml;
 import com.atlassian.confluence.event.events.security.LoginEvent;
 import com.atlassian.confluence.event.events.security.LoginFailedEvent;
 import com.atlassian.confluence.user.ConfluenceAuthenticator;
+import com.atlassian.confluence.user.crowd.EmbeddedCrowdBootstrap;
+import com.atlassian.crowd.dao.application.ApplicationDAO;
+import com.atlassian.crowd.directory.DelegatedAuthenticationDirectory;
+import com.atlassian.crowd.directory.RemoteDirectory;
+import com.atlassian.crowd.directory.loader.DirectoryInstanceLoader;
+import com.atlassian.crowd.embedded.api.Directory;
+import com.atlassian.crowd.embedded.api.DirectoryType;
+import com.atlassian.crowd.embedded.atlassianuser.EmbeddedCrowdUser;
+import com.atlassian.crowd.event.user.UserAuthenticatedEvent;
+import com.atlassian.crowd.exception.ApplicationNotFoundException;
+import com.atlassian.crowd.exception.DirectoryInstantiationException;
+import com.atlassian.crowd.exception.OperationFailedException;
+import com.atlassian.crowd.exception.UserNotFoundException;
+import com.atlassian.crowd.manager.application.ApplicationService;
+import com.atlassian.crowd.model.application.Application;
+import com.atlassian.crowd.model.application.DirectoryMapping;
 import com.atlassian.seraph.auth.AuthenticatorException;
 import com.atlassian.seraph.auth.DefaultAuthenticator;
 import com.atlassian.seraph.auth.LoginReason;
+import com.atlassian.spring.container.ContainerManager;
+import com.atlassian.user.User;
+import com.google.common.base.Function;
+import com.google.common.base.Predicate;
+import com.google.common.collect.Iterables;
 import java.io.IOException;
 import java.net.URLEncoder;
 import java.security.Principal;
@@ -15,6 +36,13 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.xml.parsers.ParserConfigurationException;
 import org.apache.log4j.Logger;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
+import org.springframework.transaction.TransactionStatus;
+import org.springframework.transaction.interceptor.DefaultTransactionAttribute;
+import org.springframework.transaction.interceptor.TransactionAttribute;
+import org.springframework.transaction.support.TransactionCallback;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.xml.sax.SAXException;
 
 public class SSOAuthenticator extends ConfluenceAuthenticator {
@@ -29,9 +57,8 @@ public class SSOAuthenticator extends ConfluenceAuthenticator {
     
     @Override
     public Principal getUser(HttpServletRequest request, HttpServletResponse response) {
-
-
-        Principal user = null;
+        
+        Principal user = null;        
         HashMap<String, String> configValues = getConfigurationValues("conf_onelogin.xml");
         String sSAMLResponse = request.getParameter("SAMLResponse");
 
@@ -51,7 +78,13 @@ public class SSOAuthenticator extends ConfluenceAuthenticator {
                 if (samlResponse.isValid()) {
                     // The signature of the SAML Response is valid. The source is trusted
                     String sNameId = samlResponse.getNameId();
+                    log.info(String.format("Checking internal DB for user %s", sNameId));
                     user = getUser(sNameId);
+                    
+                    if (user == null){
+                      log.info(String.format("User %s not found within local DB, searching directories...", sNameId));
+                      user = validateLdapUser(sNameId);
+                    }
                     
                     if(user!=null){
                         log.info("login from user: "+sNameId );
@@ -140,4 +173,175 @@ public class SSOAuthenticator extends ConfluenceAuthenticator {
         return false;
     }
     
+    
+    /**
+     * If the Confluence system is configured with one or more LDAP-based user directories, there is some
+     * plumbing code we must churn out in order to ensure that all the advanced features of Confluence's LDAP
+     * integration will work successfully.
+     * 
+     * In particular, these features will not work in an SSO environment without this code:
+     * 
+     * Default Group Memberships (any LDAP-enabled directory)
+     * Copy User On First Login (only for internal directories with delegated LDAP authentication)
+     * Synchronise Group Memberships (only for internal directories with delegated LDAP authentication)
+     * 
+     * These features are implemented in such a way that they require an "authentication" process to take place
+     * against the LDAP directory. Because, in an SSO environment, we don't do any actual authentication, this
+     * 'post-login' processing never executes unless we trigger it manually.
+     *
+     * @param username The username to be set as the authenticated user for this session.
+     * @return A valid User object for the specified user, if the user was found in any of the LDAP-based
+     *         directories configured in Confluence that are not disabled. If the user is not found, null is returned
+     *         (the user may still be a valid user in another directory, such as the Confluence internal directory, or the
+     *         communication with the correct LDAP directory may have failed).
+     */
+    protected User validateLdapUser(final String username)
+    {
+        // If we do find the user in an LDAP directory, write operations on the Confluence database may be caused in order
+        // to copy the new user into an internal directory (for delegated auth directories) and synchronise group memberships.
+        // We need to wrap this code in a new read/write transaction in order for this to work
+        TransactionDefinition transactionDefinition = new DefaultTransactionAttribute(TransactionAttribute.PROPAGATION_REQUIRED);
+        final EmbeddedCrowdUser user = (EmbeddedCrowdUser) new TransactionTemplate(getTransactionManager(), transactionDefinition).execute(new TransactionCallback()
+        {
+            public Object doInTransaction(TransactionStatus transactionStatus)
+            {
+                final Application application;
+                try
+                {
+                    application = getApplicationDao().findByName(EmbeddedCrowdBootstrap.APPLICATION_NAME);
+                }
+                catch (ApplicationNotFoundException e)
+                {
+                    // Unable to load the Application singleton from Embedded Crowd; something is seriously wrong.
+                    log.error(String.format("Unable to load Application singleton %s: %s", e.getMessage(), e.toString()));
+                    return null;
+                }
+
+                // Iterate through the application's configured directories and search any LDAP-based directory for the desired user
+                Iterable<Directory> activeDirectories = getActiveLdapDirectories(application);
+                for (Directory dir : activeDirectories)
+                {
+                    try
+                    {
+                        log.info(String.format("Enumerating directory %s (%s): %s", String.valueOf(dir.getId()), dir.getName(), dir.getDescription()));
+                        log.info(String.format("The directory is of type %s", dir.getType().toString()));
+
+                        // Retrieve the corresponding remote directory object.
+                        RemoteDirectory remoteDir;
+                        remoteDir = getDirectoryLoader().getDirectory(dir);
+
+                        // If the directory is configured for Delegated LDAP Authentication, we may need to handle the situation
+                        // where this is the first time the user has logged in and the directory is configured to "Copy User On Login".
+                        // We need to tell the directory to copy the user into the internal directory.
+                        com.atlassian.crowd.model.user.User crowdUser;
+                        if (remoteDir instanceof DelegatedAuthenticationDirectory)
+                        {
+                            log.info("Forcing optional 'Copy User on Login' and 'Group Import' processing.");
+                            // This call may cause write operations on the Confluence database in order to copy the new user and
+                            // sync group memberships.
+                            crowdUser = ((DelegatedAuthenticationDirectory) remoteDir).addOrUpdateLdapUser(username);
+                        }
+                        else
+                        {
+                            log.debug("Locating user in directory");
+                            crowdUser = remoteDir.findUserByName(username);
+                        }
+
+                        // If the user is found, trigger the 'Default Group Memberships' behaviour that may be configured on the directory.
+                        triggerUserAuthenticatedEvent(application, dir, crowdUser);
+                        return new EmbeddedCrowdUser(crowdUser); // Wrap up the crowd user object in a principal that can be injected into the Session.
+                    }
+                    catch (DirectoryInstantiationException e)
+                    {
+                        log.error(String.format("Unable to instantiate the desired RemoteDirectory; skipping (%s: %s)", e.getMessage(), e.toString()));
+                    }
+                    catch (UserNotFoundException e)
+                    {
+                        log.debug("User not found in this directory; skipping.");
+                    }
+                    catch (OperationFailedException e)
+                    {
+                        log.error(String.format("Failed to check directory for user; skipping (%s: %s)", e.getMessage(), e.toString()));
+                    }
+                }
+
+                log.info("The requested username does not appear to be a valid user in any configured LDAP directory.");
+                return null;
+            }
+        });
+        return user;
+    }
+   
+    
+     private void triggerUserAuthenticatedEvent(Application application, Directory directory, com.atlassian.crowd.model.user.User user)
+    {
+        log.debug(String.format("Firing UserAuthenticatedEvent for User %s in Directory %s", user.getName(), directory.getName()));
+
+        // Fire the event.
+        getEventPublisher().publish(new UserAuthenticatedEvent(getApplicationService(), directory, application, user));
+    }
+
+    /**
+     * Returns all configured LDAP Directories and Delegated LDAP Auth Directories that are not currently disabled. The
+     * set of directories are theoretically returned in the correct priority order.
+     *
+     * @param application The Embedded Crowd {@link Application} singleton.
+     * @return A set of {@link Directory} objects that match the desired criteria.
+     */
+    private Iterable<Directory> getActiveLdapDirectories(final Application application)
+    {
+        return Iterables.filter(Iterables.transform(application.getDirectoryMappings(), new Function<DirectoryMapping, Directory>()
+        {
+            public Directory apply(final DirectoryMapping from)
+            {
+                return from.getDirectory();
+            }
+        }), new Predicate<Directory>()
+        {
+            public boolean apply(final Directory from)
+            {
+                return (from.isActive() && (from.getType().equals(DirectoryType.DELEGATING) || from.getType().equals(DirectoryType.CONNECTOR)));
+            }
+        });
+    }
+
+    private PlatformTransactionManager transactionManager;
+
+    private PlatformTransactionManager getTransactionManager()
+    {
+        if (transactionManager == null)
+            transactionManager = (PlatformTransactionManager) ContainerManager.getComponent("transactionManager");
+
+        return transactionManager;
+    }
+
+    private ApplicationService applicationService;
+
+    private ApplicationService getApplicationService()
+    {
+        if (applicationService == null)
+            applicationService = (ApplicationService) ContainerManager.getComponent("crowdApplicationService");
+
+        return applicationService;
+    }
+
+    private ApplicationDAO applicationDao;
+
+    private ApplicationDAO getApplicationDao()
+    {
+        if (applicationDao == null)
+            applicationDao = (ApplicationDAO) ContainerManager.getComponent("embeddedCrowdApplicationDao");
+
+        return applicationDao;
+    }
+
+    private DirectoryInstanceLoader directoryLoader;
+
+    private DirectoryInstanceLoader getDirectoryLoader()
+    {
+        if (directoryLoader == null)
+            directoryLoader = (DirectoryInstanceLoader) ContainerManager.getComponent("directoryInstanceLoader");
+
+        return directoryLoader;
+    }
 }
