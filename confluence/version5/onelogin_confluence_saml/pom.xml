@@ -57,5 +57,38 @@
             <scope>compile</scope>
         </dependency>
     </dependencies>
-    
+    <repositories>
+		<repository>
+		  <id>atlassian-public</id>
+		  <url>https://maven.atlassian.com/repository/public</url>
+		  <snapshots>
+			<enabled>true</enabled>
+			<updatePolicy>never</updatePolicy>
+			<checksumPolicy>warn</checksumPolicy>
+		  </snapshots>
+		   <releases>
+			 <enabled>true</enabled>
+			 <checksumPolicy>warn</checksumPolicy>
+		  </releases>
+		</repository>
+	</repositories>
+	<build>
+	   <plugins>
+		   <plugin>
+			   <groupId>org.codehaus.mojo</groupId>
+			   <artifactId>exec-maven-plugin</artifactId>
+			   <version>1.2.1</version>
+			   <executions>
+				 <execution>
+				   <goals>
+					 <goal>java</goal>
+				   </goals>
+				 </execution>
+			   </executions>
+			   <configuration>
+				   <mainClass>com.onelogin.confluence.saml.TestSAML</mainClass>
+			   </configuration>
+		   </plugin>
+	   </plugins>
+	</build>
 </project>

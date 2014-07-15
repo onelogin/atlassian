@@ -106,7 +106,7 @@
           <exclusion>
             <groupId>jndi</groupId>
             <artifactId>jndi</artifactId>
-          </exclusion>          
+          </exclusion>		  
           <exclusion>
             <groupId>jotm</groupId>
             <artifactId>jonas_timer</artifactId>
@@ -196,4 +196,37 @@
       <type>jar</type>
     </dependency>
   </dependencies>
+  <repositories>
+		<repository>
+		  <id>atlassian-public</id>
+		  <url>https://maven.atlassian.com/repository/public</url>
+		  <snapshots>
+			<enabled>true</enabled>
+			<updatePolicy>never</updatePolicy>
+			<checksumPolicy>warn</checksumPolicy>
+		  </snapshots>
+		   <releases>
+			 <enabled>true</enabled>
+			 <checksumPolicy>warn</checksumPolicy>
+		  </releases>
+		</repository>
+		<repository>
+		  <id>repository.jboss.org-public</id>
+		  <name>JBoss.org Maven repository</name>
+		  <url>https://repository.jboss.org/nexus/content/groups/public</url>
+		</repository>  
+	</repositories>
+	<build>
+	   <plugins>
+		   <plugin>
+			   <groupId>org.codehaus.mojo</groupId>
+			   <artifactId>exec-maven-plugin</artifactId>
+			   <version>1.2.1</version>
+			   <configuration>
+				   <mainClass>com.onelogin.jira.saml.TstAuthRequest</mainClass>
+			   </configuration>
+		   </plugin>
+	   </plugins>
+	</build>
+	
 </project>
