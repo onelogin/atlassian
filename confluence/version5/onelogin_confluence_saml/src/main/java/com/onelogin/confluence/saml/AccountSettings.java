@@ -1,5 +1,5 @@
 package com.onelogin.confluence.saml;
-
+//comentario prueba
 public class AccountSettings {
 	private String certificate;
 	private String idp_sso_target_url;
