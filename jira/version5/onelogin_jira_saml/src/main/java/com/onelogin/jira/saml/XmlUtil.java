@@ -1,8 +1,11 @@
 package com.onelogin.jira.saml;
 
 import java.io.File;
+import java.util.HashMap;
+
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
+
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
@@ -15,10 +18,17 @@ public class XmlUtil {
     }
 
     public static void main(String[] argv) {
-         /*XmlUtil xm = new XmlUtil();
-         String sFile = "c:\\temp\\jira_onelogin.xml";
-    	 String sFile = "/home/rogeliosevilla1/jira_onelogin.xml";
-    	 String s = xm.getConfigs(sFile); */
+         //XmlUtil xm = new XmlUtil();
+         //String sFile = "c:\\temp\\jira_onelogin.xml";
+//    	 String sFile = "/Users/jenn/atlassian/jira/jira_onelogin.xml";
+//    	HashMap<String,String> configValues = new HashMap<String,String>();
+//        String sConf = xm.getConfigs(sFile);
+//        String[] sConfTemp = sConf.split("\\|");
+//        configValues.put("certificate", sConfTemp[0]);
+//        configValues.put("assertionConsumerServiceUrl", sConfTemp[1]);
+//        configValues.put("issuer", sConfTemp[2]);
+//        configValues.put("idpSsoTargetUrl", sConfTemp[3]);
+//        System.out.println(configValues.size());
     }
 
     public String getConfigs(String sFile) {
@@ -88,7 +98,6 @@ public class XmlUtil {
 	                    }
                     }
                 }
-                System.out.println(strResult);
             }
         } catch (SAXParseException err) {
             System.out.println("** Parsing error" + ", line " + err.getLineNumber() + ", uri " + err.getSystemId());

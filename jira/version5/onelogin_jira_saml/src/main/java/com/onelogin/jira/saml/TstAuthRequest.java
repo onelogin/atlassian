@@ -3,9 +3,9 @@ package com.onelogin.jira.saml;
 import java.net.URLEncoder;
 
 public class TstAuthRequest {
-private static final String jiraHost = "192.168.1.92";
+private static final String jiraHost = "localhost";
 //private static final String oneloginSamlEndpoint = "http://onelogin.local/saml/signon/39854";
-private static final String oneloginSamlEndpoint = "http://onelogin.local:3000/trust/saml2/http-post/sso/48426";
+private static final String oneloginSamlEndpoint = "https://app.onelogin.com/trust/saml2/http-post/sso/177115";
     
 	public static void main(String[] argv)
 	{
@@ -32,11 +32,9 @@ private static final String oneloginSamlEndpoint = "http://onelogin.local:3000/t
 			
                         System.out.println(authReq.getRequest(1));
                         
-			reqString = accSettings.getIdp_sso_target_url()
-					+ "?SAMLRequest="
-					+ AuthRequest.getRidOfCRLF(URLEncoder.encode(
-							authReq.getRequest(AuthRequest.base64),
-							"UTF-8"));
+                        reqString = accSettings.getIdp_sso_target_url()+
+                    			"?SAMLRequest=" +
+                    			URLEncoder.encode(authReq.getRequest(AuthRequest.base64),"UTF-8");
                         System.out.println(reqString);
 		}
 		catch(Exception ex)

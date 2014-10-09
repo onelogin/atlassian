@@ -2,36 +2,38 @@ package com.onelogin.jira.saml;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.nio.charset.Charset;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.UUID;
+import java.util.zip.Deflater;
+import java.util.zip.DeflaterOutputStream;
 import javax.xml.stream.XMLStreamException;
+
+
 import org.apache.commons.codec.binary.Base64;
 
 public class AuthRequest {
 
-	private String id;
-	private String issueInstant;
-	private AppSettings appSettings;
+	private final String id;
+	private final String issueInstant;
+	private final AppSettings appSettings;
 	public static final int base64 = 1;
 
-	public AuthRequest(AppSettings appSettings, AccountSettings accountSettings){		
+	public AuthRequest(AppSettings appSettings, AccountSettings accountSettings){
 		this.appSettings = appSettings;
-		id="_"+UUID.randomUUID().toString();		
-		SimpleDateFormat simpleDf = new SimpleDateFormat("yyyy-MM-dd'T'H:mm:ss");
-		issueInstant = simpleDf.format(new Date());		
+		id="_"+UUID.randomUUID().toString();
+		SimpleDateFormat simpleDf = new SimpleDateFormat("yyyy-MM-dd'T'H:mm:ss'Z'");
+		issueInstant = simpleDf.format(new Date());
 	}
 
 	public String getRequest(int format) throws XMLStreamException, IOException {
-		
-		ByteArrayOutputStream baos = new ByteArrayOutputStream();	
-		String sBaos = "";
-		
-		/*
-		XMLOutputFactory factory = XMLOutputFactory.newInstance();
+		String result = null;
+
+		ByteArrayOutputStream baos = new ByteArrayOutputStream();
+
+		/*XMLOutputFactory factory = XMLOutputFactory.newInstance();
 		XMLStreamWriter writer = factory.createXMLStreamWriter(baos);
-		
+
 		writer.writeStartElement("samlp", "AuthnRequest", "urn:oasis:names:tc:SAML:2.0:protocol");
 		writer.writeNamespace("samlp","urn:oasis:names:tc:SAML:2.0:protocol");
 
@@ -55,7 +57,6 @@ public class AuthRequest {
 		writer.writeStartElement("samlp","RequestedAuthnContext","urn:oasis:names:tc:SAML:2.0:protocol");
 
 		writer.writeAttribute("Comparison", "exact");
-		writer.writeEndElement();
 
 		writer.writeStartElement("saml","AuthnContextClassRef","urn:oasis:names:tc:SAML:2.0:assertion");
 		writer.writeNamespace("saml", "urn:oasis:names:tc:SAML:2.0:assertion");
@@ -63,10 +64,10 @@ public class AuthRequest {
 		writer.writeEndElement();
 
 		writer.writeEndElement();
-		writer.flush();		
-		*/
+		writer.writeEndElement();
+		writer.flush();*/
 		
-		sBaos = "<samlp:AuthnRequest xmlns:samlp='urn:oasis:names:tc:SAML:2.0:protocol' ID='" + id + "' Version='2.0' IssueInstant='" + this.issueInstant + "' ProtocolBinding='urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST' AssertionConsumerServiceURL='" + this.appSettings.getAssertionConsumerServiceUrl() + "'>"
+		String sBaos = "<samlp:AuthnRequest xmlns:samlp='urn:oasis:names:tc:SAML:2.0:protocol' ID='" + id + "' Version='2.0' IssueInstant='" + this.issueInstant + "' ProtocolBinding='urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST' AssertionConsumerServiceURL='" + this.appSettings.getAssertionConsumerServiceUrl() + "'>"
 				+ "<saml:Issuer xmlns:saml='urn:oasis:names:tc:SAML:2.0:assertion'>" + this.appSettings.getIssuer() + "</saml:Issuer>"
 				+ "<samlp:NameIDPolicy Format='urn:oasis:names:tc:SAML:2.0:nameid-format:unspecified' AllowCreate='true'>"
 				+ "</samlp:NameIDPolicy>"
@@ -76,37 +77,30 @@ public class AuthRequest {
 				+ "</samlp:AuthnRequest>";
 
 		baos.write(sBaos.getBytes());
-		
-		if (format == base64) {
-			byte [] encoded = Base64.encodeBase64Chunked(baos.toByteArray());
-			String result = new String(encoded,Charset.forName("UTF-8"));
-
-			return result;
+		if (format == base64) {       
+			result = encodeSAMLRequest(baos.toByteArray());
 		}
-
-		return null;
+		return result;
 	}
 
- 	public static String getRidOfCRLF(String what) {
-		String lf = "%0D";
-		String cr = "%0A";
-		String now = lf;
+	private String encodeSAMLRequest(byte[] pSAMLRequest) throws RuntimeException {
 
-		int index = what.indexOf(now);
-		StringBuffer r = new StringBuffer();
+		Base64 base64Encoder = new Base64();
 
-		while (index!=-1) {
-			r.append(what.substring(0,index));
-			what = what.substring(index+3,what.length());
+		try {
+			ByteArrayOutputStream byteArray = new ByteArrayOutputStream();
+			Deflater deflater = new Deflater(Deflater.DEFAULT_COMPRESSION, true);
 
-			if (now.equals(lf)) {
-				now = cr;
-			} else {
-				now = lf;
-			}
+			DeflaterOutputStream def = new DeflaterOutputStream(byteArray, deflater);
+			def.write(pSAMLRequest);
+			def.close();
+			byteArray.close();
 
-			index = what.indexOf(now);
+			String stream = new String(base64Encoder.encode(byteArray.toByteArray()));
+
+			return stream.trim();
+		} catch (Exception e) {
+			throw new RuntimeException(e);
 		}
-		return r.toString();
 	}
 }

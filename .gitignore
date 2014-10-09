@@ -1,2 +1,16 @@
 target
 *~
+
+confluence/version5/onelogin_confluence_saml/.classpath
+
+confluence/version5/onelogin_confluence_saml/.project
+
+jira/version6/onelogin_jira_saml/.classpath
+
+jira/version6/onelogin_jira_saml/.project
+
+jira/version6/onelogin_jira_saml/.settings/org.eclipse.jdt.core.prefs
+
+jira/version5/onelogin_jira_saml/.classpath
+
+jira/version5/onelogin_jira_saml/.project

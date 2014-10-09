@@ -4,20 +4,30 @@ import com.atlassian.crowd.embedded.api.User;
 import com.atlassian.jira.user.UserUtils;
 import com.atlassian.seraph.auth.AuthenticatorException;
 import com.atlassian.seraph.auth.DefaultAuthenticator;
+
 import java.io.IOException;
 import java.net.URLEncoder;
 import java.security.Principal;
 import java.security.cert.CertificateException;
 import java.util.HashMap;
+
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.xml.parsers.ParserConfigurationException;
+import javax.xml.xpath.XPathExpressionException;
+
 import org.apache.log4j.Logger;
 import org.xml.sax.SAXException;
 
 public class SSOAuthenticator extends DefaultAuthenticator {
 
-    private static final Logger log = Logger.getLogger(SSOAuthenticator.class);
+    /**
+	 * 
+	 */
+	private static final long serialVersionUID = -7616438144089762382L;
+	
+	private static final Logger log = Logger.getLogger(SSOAuthenticator.class);
+	
     public String reqString = "";
 
     public SSOAuthenticator() {
@@ -25,13 +35,18 @@ public class SSOAuthenticator extends DefaultAuthenticator {
 
     @Override
     public Principal getUser(HttpServletRequest request, HttpServletResponse response) {
-
+    	log.info(" getUser ");
+    	
         Principal user = null;
         HashMap<String,String> configValues = getConfigurationValues("jira_onelogin.xml");
+        log.info(" configValues loaded issuer:" + configValues.get("issuer"));
         String sSAMLResponse = request.getParameter("SAMLResponse");
         
         try {
                 if (sSAMLResponse != null) {
+                	
+                	log.info("get SAMLResponse");
+                	
 
                     request.getSession().setAttribute(DefaultAuthenticator.LOGGED_IN_KEY,  null);
                     request.getSession().setAttribute(DefaultAuthenticator.LOGGED_OUT_KEY, null);
@@ -43,6 +58,8 @@ public class SSOAuthenticator extends DefaultAuthenticator {
                         // The signature of the SAML Response is valid. The source is trusted
                         final String nameId = samlResponse.getNameId();
                         user = getUser(nameId);
+                        log.info("----- user :" + user);
+                        System.out.println("----- user :" + user);
 
                         if(user!=null){
                             putPrincipalInSessionContext(request, user);
@@ -58,16 +75,19 @@ public class SSOAuthenticator extends DefaultAuthenticator {
 
                     } else {
                         log.error("SAML Response is not valid");
+                        System.out.println("SAML Response is not valid");
                     }
                 } 
                 else if (request.getSession() != null && request.getSession().getAttribute(DefaultAuthenticator.LOGGED_IN_KEY) != null) {
                     log.info("Session found; user already logged in");
                     user = (Principal) request.getSession().getAttribute(DefaultAuthenticator.LOGGED_IN_KEY);
-                 }
+                    log.info("----- user :" + user);
+                    }
                 
                 else {
                     // The appSettings object contain application specific settings used by the SAML library
                     AppSettings appSettings = new AppSettings();
+                    
 
                     // Set the URL of the consume.jsp (or similar) file for this application. The SAML Response will be posted to this URL
                     appSettings.setAssertionConsumerServiceUrl(configValues.get("assertionConsumerServiceUrl"));
@@ -83,13 +103,12 @@ public class SSOAuthenticator extends DefaultAuthenticator {
 
                     // Generate an AuthRequest and send it to the identity provider
                     AuthRequest authReq = new AuthRequest(appSettings, accSettings);
-
-                    reqString = accSettings.getIdp_sso_target_url()
-                            + "?SAMLRequest="
-                            + AuthRequest.getRidOfCRLF(URLEncoder.encode(
-                            authReq.getRequest(AuthRequest.base64),
-                            "UTF-8"));
-
+                    log.info("Generated AuthRequest and send it to the identity provider ");
+                    
+                    reqString = accSettings.getIdp_sso_target_url()+
+                    			"?SAMLRequest=" +
+                    			URLEncoder.encode(authReq.getRequest(AuthRequest.base64),"UTF-8");
+                    log.info("reqString : " +reqString );
                     request.getSession().setAttribute("reqString", reqString);
                 }
             
@@ -100,12 +119,14 @@ public class SSOAuthenticator extends DefaultAuthenticator {
         return user;
     }
 
-    private Response getSamlResponse(String certificate,String responseEncrypted) throws CertificateException, ParserConfigurationException, SAXException, IOException {
-        AccountSettings accountSettings = new AccountSettings();
+    private Response getSamlResponse(String certificate,String responseEncrypted) throws CertificateException, ParserConfigurationException, SAXException, IOException, XPathExpressionException {
+    	 log.info("getSamlResponse" );
+    	AccountSettings accountSettings = new AccountSettings();
         accountSettings.setCertificate(certificate);
 
         Response samlResponse = new Response(accountSettings);
         samlResponse.loadXmlFromBase64(responseEncrypted);
+        log.info("samlResponse" + samlResponse.toString());
         return samlResponse;
     }
 
@@ -131,6 +152,7 @@ public class SSOAuthenticator extends DefaultAuthenticator {
 
     @Override
     protected boolean authenticate(Principal prncpl, String string) throws AuthenticatorException {
-        return false;
+    	log.info("authenticate");
+    	return false;
     }
 }
