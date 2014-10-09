@@ -7,8 +7,8 @@ import java.util.Date;
 import java.util.UUID;
 import java.util.zip.Deflater;
 import java.util.zip.DeflaterOutputStream;
-import javax.xml.stream.XMLStreamException;
 
+import javax.xml.stream.XMLStreamException;
 
 import org.apache.commons.codec.binary.Base64;
 
@@ -76,6 +76,7 @@ public class AuthRequest {
 				+ "<saml:AuthnContextClassRef xmlns:saml='urn:oasis:names:tc:SAML:2.0:assertion'>urn:oasis:names:tc:SAML:2.0:ac:classes:PasswordProtectedTransport</saml:AuthnContextClassRef>"
 				+ "</samlp:AuthnRequest>";
 
+		System.out.println("sBaos : " +sBaos);
 		baos.write(sBaos.getBytes());
 		if (format == base64) {       
 			result = encodeSAMLRequest(baos.toByteArray());
