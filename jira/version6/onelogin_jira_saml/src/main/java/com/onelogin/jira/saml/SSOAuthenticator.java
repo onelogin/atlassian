@@ -2,6 +2,7 @@ package com.onelogin.jira.saml;
 
 import com.atlassian.crowd.embedded.api.User;
 import com.atlassian.jira.user.UserUtils;
+import com.atlassian.jira.util.UrlValidator;
 import com.atlassian.seraph.auth.AuthenticatorException;
 import com.atlassian.seraph.auth.DefaultAuthenticator;
 
@@ -35,7 +36,7 @@ public class SSOAuthenticator extends DefaultAuthenticator {
 
     @Override
     public Principal getUser(HttpServletRequest request, HttpServletResponse response) {
-    	log.debug(" getUser ");
+    	System.out.println(" getUser ");
     	
         Principal user = null;
         HashMap<String,String> configValues = getConfigurationValues("jira_onelogin.xml");
@@ -69,13 +70,20 @@ public class SSOAuthenticator extends DefaultAuthenticator {
                             getElevatedSecurityGuard().onSuccessfulLoginAttempt(request, nameId);
                             request.getSession().setAttribute(DefaultAuthenticator.LOGGED_IN_KEY, user);
                             request.getSession().setAttribute(DefaultAuthenticator.LOGGED_OUT_KEY, null);
+
+                            String relayState = request.getParameter("RelayState").toString();
+                            
+                            if(relayState != null && UrlValidator.isValid(relayState) ){
+                                if(relayState.contains(request.getServerName())){
+                                    //System.out.println("valid RelayState ");
+                                    request.getSession().setAttribute("os_destination",relayState);
+                                }                           
+                            }
+
                         }else{
                             getElevatedSecurityGuard().onFailedLoginAttempt(request, nameId);
                         }
-                        
-//                        if(user!=null && !response.isCommitted())
-//                            response.sendRedirect("/secure/Dashboard.jspa");                            
-
+                           
                     } else {
                         log.error("SAML Response is not valid");
                     }
@@ -105,11 +113,10 @@ public class SSOAuthenticator extends DefaultAuthenticator {
                     // Generate an AuthRequest and send it to the identity provider
                     AuthRequest authReq = new AuthRequest(appSettings, accSettings);
                     log.info("Generated AuthRequest and send it to the identity provider ");
-                    System.out.println("Generated AuthRequest and send it to the identity provider ");
+                    //System.out.println("Generated AuthRequest and send it to the identity provider ");
 
-                    reqString = accSettings.getIdp_sso_target_url()+
-                    			"?SAMLRequest=" +
-                    			URLEncoder.encode(authReq.getRequest(AuthRequest.base64),"UTF-8");
+                    String relayState = request.getRequestURL().toString().replace(request.getRequestURI(), os_destination);
+                    reqString = authReq.getSSOurl(accSettings.getIdp_sso_target_url(), relayState);   			
                     log.debug("reqString : " +reqString );
                     request.getSession().setAttribute("reqString", reqString);
                 }

@@ -4,7 +4,7 @@
 
   <groupId>com.onelogin</groupId>
   <artifactId>customauth-jira</artifactId>
-  <version>6.1</version>
+  <version>6.1.1</version>
   <packaging>jar</packaging>
 
   <name>onelogin_jira_saml_6</name>

@@ -2,6 +2,8 @@ package com.onelogin.jira.saml;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
+import java.net.URLEncoder;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.UUID;
@@ -76,7 +78,7 @@ public class AuthRequest {
 				+ "<saml:AuthnContextClassRef xmlns:saml='urn:oasis:names:tc:SAML:2.0:assertion'>urn:oasis:names:tc:SAML:2.0:ac:classes:PasswordProtectedTransport</saml:AuthnContextClassRef>"
 				+ "</samlp:AuthnRequest>";
 
-		System.out.println("sBaos : " +sBaos);
+		//System.out.println("sBaos : " +sBaos);
 		baos.write(sBaos.getBytes());
 		if (format == base64) {       
 			result = encodeSAMLRequest(baos.toByteArray());
@@ -103,5 +105,15 @@ public class AuthRequest {
 		} catch (Exception e) {
 			throw new RuntimeException(e);
 		}
+	}
+	
+	public String getSSOurl(String IdpSsoTargetUrl, String... parameters) throws XMLStreamException, UnsupportedEncodingException, IOException
+	{
+		String ssourl = IdpSsoTargetUrl+"?SAMLRequest=" + URLEncoder.encode(getRequest(base64),"UTF-8");
+		String relayState = parameters.length > 0 ? parameters[0] : "";
+		if(!relayState.isEmpty()){
+			ssourl = ssourl + "&RelayState=" + relayState;
+		}
+		return ssourl;
 	}
 }

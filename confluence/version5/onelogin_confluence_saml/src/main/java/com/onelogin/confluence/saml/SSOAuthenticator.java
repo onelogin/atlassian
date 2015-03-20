@@ -1,5 +1,25 @@
 package com.onelogin.confluence.saml;
 
+import java.io.IOException;
+import java.security.Principal;
+import java.security.cert.CertificateException;
+import java.util.HashMap;
+
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import javax.xml.parsers.ParserConfigurationException;
+import javax.xml.xpath.XPathExpressionException;
+
+import org.apache.log4j.Logger;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
+import org.springframework.transaction.TransactionStatus;
+import org.springframework.transaction.interceptor.DefaultTransactionAttribute;
+import org.springframework.transaction.interceptor.TransactionAttribute;
+import org.springframework.transaction.support.TransactionCallback;
+import org.springframework.transaction.support.TransactionTemplate;
+import org.xml.sax.SAXException;
+
 import com.atlassian.confluence.event.events.security.LoginEvent;
 import com.atlassian.confluence.event.events.security.LoginFailedEvent;
 import com.atlassian.confluence.user.ConfluenceAuthenticator;
@@ -27,23 +47,6 @@ import com.atlassian.user.User;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
-import java.io.IOException;
-import java.net.URLEncoder;
-import java.security.Principal;
-import java.security.cert.CertificateException;
-import java.util.HashMap;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import javax.xml.parsers.ParserConfigurationException;
-import org.apache.log4j.Logger;
-import org.springframework.transaction.PlatformTransactionManager;
-import org.springframework.transaction.TransactionDefinition;
-import org.springframework.transaction.TransactionStatus;
-import org.springframework.transaction.interceptor.DefaultTransactionAttribute;
-import org.springframework.transaction.interceptor.TransactionAttribute;
-import org.springframework.transaction.support.TransactionCallback;
-import org.springframework.transaction.support.TransactionTemplate;
-import org.xml.sax.SAXException;
 
 public class SSOAuthenticator extends ConfluenceAuthenticator {
 
@@ -58,13 +61,24 @@ public class SSOAuthenticator extends ConfluenceAuthenticator {
     @Override
     public Principal getUser(HttpServletRequest request, HttpServletResponse response) {
         
-        Principal user = null;        
+        log.debug(" getUser ");
+        //System.out.println(" getUser ");
+        Principal user = null;
         HashMap<String, String> configValues = getConfigurationValues("conf_onelogin.xml");
         String sSAMLResponse = request.getParameter("SAMLResponse");
+		String os_destination = request.getParameter("os_destination");
 
+		boolean samlResponseValidated = false;
+		if (os_destination != null){
+			request.getSession().setAttribute("os_destination", os_destination);
+			log.warn(" os_destination: " + os_destination);
+			//System.out.println(" os_destination: " + os_destination);
+		}
         try {
 
             if (sSAMLResponse != null) {
+            	
+            	//System.out.println("SAML Response not null");
 
                request.getSession().setAttribute(DefaultAuthenticator.LOGGED_IN_KEY,  null);
                request.getSession().setAttribute(DefaultAuthenticator.LOGGED_OUT_KEY, null);
@@ -79,15 +93,18 @@ public class SSOAuthenticator extends ConfluenceAuthenticator {
                     // The signature of the SAML Response is valid. The source is trusted
                     String sNameId = samlResponse.getNameId();
                     log.info(String.format("Checking internal DB for user %s", sNameId));
+                    //System.out.println(String.format("Checking internal DB for user %s", sNameId));
                     user = getUser(sNameId);
                     
                     if (user == null){
                       log.info(String.format("User %s not found within local DB, searching directories...", sNameId));
+                      //System.out.println(String.format("User %s not found within local DB, searching directories...", sNameId));
                       user = validateLdapUser(sNameId);
                     }
                     
                     if(user!=null){
                         log.info("login from user: "+sNameId );
+                        //System.out.println("login from user: "+sNameId );
                         putPrincipalInSessionContext(request, user);
                         getElevatedSecurityGuard().onSuccessfulLoginAttempt(request, sNameId);
                         LoginReason.OK.stampRequestResponse(request, response);
@@ -95,18 +112,33 @@ public class SSOAuthenticator extends ConfluenceAuthenticator {
                         getEventPublisher().publish(new LoginEvent(this, sNameId, request.getSession().getId(), remoteHost, remoteIP, LoginEvent.UNKNOWN));
                         request.getSession().setAttribute(DefaultAuthenticator.LOGGED_IN_KEY, user);
                         request.getSession().setAttribute(DefaultAuthenticator.LOGGED_OUT_KEY, null);
+						log.warn("User sucessfully logged in " + sNameId);
+						String relayState = request.getSession().getAttribute("RelayState").toString();
+						if(relayState != null && !relayState.isEmpty() && relayState.contains(request.getServerName())){
+							request.getSession().setAttribute("redirect", true);
+						}else{
+							request.getSession().setAttribute("redirect", false);
+						}
+						
                     }else{
                         log.error("user: "+sNameId+" could not be found");
+                        //System.out.println("user: "+sNameId+" could not be found");
                         getElevatedSecurityGuard().onFailedLoginAttempt(request, sNameId);
                         getEventPublisher().publish(new LoginFailedEvent(this, sNameId, request.getSession().getId(), remoteHost, remoteIP));
+                        request.setAttribute("samlInvalid", "true");
                         return null;
                     }
                     
                 } else {
-                    log.error("SAML Response is not valid");
+					request.setAttribute("samlInvalid", "true");
+					log.error("SAML Response is not valid");
+					log.warn(sSAMLResponse);
+					//System.out.println(sSAMLResponse);
                 }
+				samlResponseValidated = true;
             } else if (request.getSession() != null && request.getSession().getAttribute(DefaultAuthenticator.LOGGED_IN_KEY) != null) {
                 log.info("Session found; user already logged in");
+                //System.out.println("Session found; user already logged in");
                 user = (Principal) request.getSession().getAttribute(DefaultAuthenticator.LOGGED_IN_KEY);
             } else {
 
@@ -127,19 +159,21 @@ public class SSOAuthenticator extends ConfluenceAuthenticator {
 
                 // Generate an AuthRequest and send it to the identity provider
                 AuthRequest authReq = new AuthRequest(appSettings, accSettings);
-                
-
-                reqString = accSettings.getIdp_sso_target_url()
-                        + "?SAMLRequest="
-                        + AuthRequest.getRidOfCRLF(URLEncoder.encode(
-                        authReq.getRequest(AuthRequest.base64),
-                        "UTF-8"));
-
+                String relayState = null;
+                if(os_destination != null){
+                	relayState = request.getRequestURL().toString().replace(request.getRequestURI(), os_destination);
+                	request.getSession().setAttribute("RelayState", relayState);
+                 }
+                reqString = authReq.getSSOurl(accSettings.getIdp_sso_target_url(), relayState);   			
+                log.debug("reqString : " +reqString );
+                //System.out.println("reqString : " +reqString );
                 request.getSession().setAttribute("reqString", reqString); 
             }
 
         } catch (Exception e) {
             log.error("error while trying to send the saml auth request:" , e);
+            //System.out.println("error while trying to send the saml auth request:"  + e.getMessage());
+            e.printStackTrace();
         }
 
         return user;  
@@ -157,7 +191,7 @@ public class SSOAuthenticator extends ConfluenceAuthenticator {
         return configValues;
     }
 
-    private Response getSamlResponse(String certificate,String responseEncrypted) throws CertificateException, ParserConfigurationException, SAXException, IOException {
+    private Response getSamlResponse(String certificate,String responseEncrypted) throws CertificateException, ParserConfigurationException, SAXException, IOException, XPathExpressionException {
         // User account specific settings. Import the certificate here
         AccountSettings accountSettings = new AccountSettings();
         accountSettings.setCertificate(certificate);
