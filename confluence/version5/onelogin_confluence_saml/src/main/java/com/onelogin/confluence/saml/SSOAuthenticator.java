@@ -70,6 +70,9 @@ public class SSOAuthenticator extends ConfluenceAuthenticator {
 
 		boolean samlResponseValidated = false;
 		if (os_destination != null){
+			if(os_destination.equals("index.action")){
+				os_destination = "";
+			}
 			request.getSession().setAttribute("os_destination", os_destination);
 			log.warn(" os_destination: " + os_destination);
 			//System.out.println(" os_destination: " + os_destination);

@@ -115,7 +115,10 @@ public class SSOAuthenticator extends DefaultAuthenticator {
                     log.info("Generated AuthRequest and send it to the identity provider ");
                     //System.out.println("Generated AuthRequest and send it to the identity provider ");
 
-                    String relayState = request.getRequestURL().toString().replace(request.getRequestURI(), os_destination);
+                    String relayState = null;
+                    if(os_destination != null){
+                    	relayState = request.getRequestURL().toString().replace(request.getRequestURI(), os_destination);
+                    }
                     reqString = authReq.getSSOurl(accSettings.getIdp_sso_target_url(), relayState);   			
                     log.debug("reqString : " +reqString );
                     request.getSession().setAttribute("reqString", reqString);
