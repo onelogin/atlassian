@@ -29,105 +29,109 @@ public class SSOAuthenticator extends DefaultAuthenticator {
 	
 	private static final Logger log = Logger.getLogger(SSOAuthenticator.class);
 	
-    public String reqString = "";
+    public String reqString = "/";
 
     public SSOAuthenticator() {
     }
 
     @Override
     public Principal getUser(HttpServletRequest request, HttpServletResponse response) {
-    	System.out.println(" getUser ");
+    	//System.out.println(" getUser ");
     	
         Principal user = null;
-        HashMap<String,String> configValues = getConfigurationValues("jira_onelogin.xml");
-        log.info(" configValues loaded issuer:" + configValues.get("issuer"));
-        String sSAMLResponse = request.getParameter("SAMLResponse");
         
-        String os_destination = request.getParameter("os_destination");
-        if(os_destination != null){
-        	request.getSession().setAttribute("os_destination", os_destination);
-        }
+        if (request.getSession() != null && request.getSession().getAttribute(DefaultAuthenticator.LOGGED_IN_KEY) != null) {
+            log.info("Session found; user already logged in");
+            user = (Principal) request.getSession().getAttribute(DefaultAuthenticator.LOGGED_IN_KEY);
+            log.info(" user :" + user);
+         }else{
+        	 
+	        HashMap<String,String> configValues = getConfigurationValues("jira_onelogin.xml");
+	        log.info(" configValues loaded issuer:" + configValues.get("issuer"));
+	        
+	        String os_destination = request.getParameter("os_destination");
+	        if(os_destination != null){
+	        	request.getSession().setAttribute("os_destination", os_destination);
+	        }
         
-        try {
-                if (sSAMLResponse != null) {
-                	
-                	log.info("get SAMLResponse");
-                	
-                    request.getSession().setAttribute(DefaultAuthenticator.LOGGED_IN_KEY,  null);
-                    request.getSession().setAttribute(DefaultAuthenticator.LOGGED_OUT_KEY, null);
-                    
-                    // User account specific settings. Import the certificate here
-                    Response samlResponse = getSamlResponse(configValues.get("certificate"),request.getParameter("SAMLResponse"));                    
+	        String sSAMLResponse = request.getParameter("SAMLResponse");
+	        log.info("get SAMLResponse");
+        	//System.out.println("get SAMLResponse");
+        
+	        try {
+	        	if (sSAMLResponse == null) {
+		        
+	                    // The appSettings object contain application specific settings used by the SAML library
+	                    AppSettings appSettings = new AppSettings();
+	                    
+	                    // Set the URL of the consume.jsp (or similar) file for this application. The SAML Response will be posted to this URL
+	                    appSettings.setAssertionConsumerServiceUrl(configValues.get("assertionConsumerServiceUrl"));
 
-                    if (samlResponse.isValid()) {
-                        // The signature of the SAML Response is valid. The source is trusted
-                        final String nameId = samlResponse.getNameId();
-                        user = getUser(nameId);
-                        log.debug(" SAML user :" + user);
-                        
-                        if(user!=null){
-                            putPrincipalInSessionContext(request, user);
-                            getElevatedSecurityGuard().onSuccessfulLoginAttempt(request, nameId);
-                            request.getSession().setAttribute(DefaultAuthenticator.LOGGED_IN_KEY, user);
-                            request.getSession().setAttribute(DefaultAuthenticator.LOGGED_OUT_KEY, null);
+	                    // Set the issuer of the authentication request. This would usually be the URL of the issuing web application
+	                    appSettings.setIssuer(configValues.get("issuer"));
 
-                            String relayState = request.getParameter("RelayState").toString();
-                            
-                            if(relayState != null && UrlValidator.isValid(relayState) ){
-                                if(relayState.contains(request.getServerName())){
-                                    //System.out.println("valid RelayState ");
-                                    request.getSession().setAttribute("os_destination",relayState);
-                                }                           
-                            }
+	                    // The accSettings object contains settings specific to the users account. At this point, your application must have identified the users origin
+	                    AccountSettings accSettings = new AccountSettings();
 
-                        }else{
-                            getElevatedSecurityGuard().onFailedLoginAttempt(request, nameId);
-                        }
-                           
-                    } else {
-                        log.error("SAML Response is not valid");
-                    }
-                } 
-                else if (request.getSession() != null && request.getSession().getAttribute(DefaultAuthenticator.LOGGED_IN_KEY) != null) {
-                    log.info("Session found; user already logged in");
-                    user = (Principal) request.getSession().getAttribute(DefaultAuthenticator.LOGGED_IN_KEY);
-                    log.info(" user :" + user);
-                 }
-                
-                else {
-                    // The appSettings object contain application specific settings used by the SAML library
-                    AppSettings appSettings = new AppSettings();
-                    
-                    // Set the URL of the consume.jsp (or similar) file for this application. The SAML Response will be posted to this URL
-                    appSettings.setAssertionConsumerServiceUrl(configValues.get("assertionConsumerServiceUrl"));
+	                    // The URL at the Identity Provider where the authentication request should be sent
+	                    accSettings.setIdpSsoTargetUrl(configValues.get("idpSsoTargetUrl"));
 
-                    // Set the issuer of the authentication request. This would usually be the URL of the issuing web application
-                    appSettings.setIssuer(configValues.get("issuer"));
+	                    // Generate an AuthRequest and send it to the identity provider
+	                    AuthRequest authReq = new AuthRequest(appSettings, accSettings);
+	                    log.info("Generated AuthRequest and send it to the identity provider ");
+	                    //System.out.println("Generated AuthRequest and send it to the identity provider ");
 
-                    // The accSettings object contains settings specific to the users account. At this point, your application must have identified the users origin
-                    AccountSettings accSettings = new AccountSettings();
-
-                    // The URL at the Identity Provider where the authentication request should be sent
-                    accSettings.setIdpSsoTargetUrl(configValues.get("idpSsoTargetUrl"));
-
-                    // Generate an AuthRequest and send it to the identity provider
-                    AuthRequest authReq = new AuthRequest(appSettings, accSettings);
-                    log.info("Generated AuthRequest and send it to the identity provider ");
-                    //System.out.println("Generated AuthRequest and send it to the identity provider ");
-
-                    String relayState = null;
-                    if(os_destination != null){
-                    	relayState = request.getRequestURL().toString().replace(request.getRequestURI(), os_destination);
-                    }
-                    reqString = authReq.getSSOurl(accSettings.getIdp_sso_target_url(), relayState);   			
-                    log.debug("reqString : " +reqString );
-                    request.getSession().setAttribute("reqString", reqString);
-                }
-            
-        } catch (Exception e) {
-            log.error("error while trying to send the saml auth request:" + e);
-        }
-
+	                    String relayState = null;
+	                    if(os_destination != null){
+	                    	relayState = request.getRequestURL().toString().replace(request.getRequestURI(), os_destination);
+	                    }
+	                    reqString = authReq.getSSOurl(accSettings.getIdp_sso_target_url(), relayState);   			
+	                   
+	                
+	        	} else {
+	
+	                    request.getSession().setAttribute(DefaultAuthenticator.LOGGED_IN_KEY,  null);
+	                    request.getSession().setAttribute(DefaultAuthenticator.LOGGED_OUT_KEY, null);
+	                    
+	                    // User account specific settings. Import the certificate here
+	                    Response samlResponse = getSamlResponse(configValues.get("certificate"),request.getParameter("SAMLResponse"));                    
+	
+	                    if (samlResponse.isValid()) {
+	                        // The signature of the SAML Response is valid. The source is trusted
+	                        final String nameId = samlResponse.getNameId();
+	                        user = getUser(nameId);
+	                        log.debug(" SAML user :" + user);
+	                        
+	                        if(user!=null){
+	                            putPrincipalInSessionContext(request, user);
+	                            getElevatedSecurityGuard().onSuccessfulLoginAttempt(request, nameId);
+	                            request.getSession().setAttribute(DefaultAuthenticator.LOGGED_IN_KEY, user);
+	                            request.getSession().setAttribute(DefaultAuthenticator.LOGGED_OUT_KEY, null);
+	
+	                            String relayState = request.getParameter("RelayState").toString();
+	                            
+	                            if(relayState != null && UrlValidator.isValid(relayState) ){
+	                                if(relayState.contains(request.getServerName())){
+	                                    //System.out.println("valid RelayState ");
+	                                    request.getSession().setAttribute("os_destination",relayState);
+	                                }                           
+	                            }
+	
+	                        }else{
+	                            getElevatedSecurityGuard().onFailedLoginAttempt(request, nameId);
+	                        }
+	                           
+	                    } else {
+	                        log.error("SAML Response is not valid");
+	                    }
+                	} 
+     
+	        } catch (Exception e) {
+	        	log.error("error while trying to send the saml auth request:" + e);
+	        }
+         }
+        log.debug("reqString : " +reqString );
+        request.getSession().setAttribute("reqString", reqString);
         return user;
     }
 
