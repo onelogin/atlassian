@@ -5,7 +5,7 @@
 
     <groupId>com.onelogin</groupId>
     <artifactId>customauth-conf5</artifactId>
-    <version>0.4</version>
+    <version>0.5</version>
     <packaging>jar</packaging>
 
     <name>onelogin_confluence_saml_5</name>
