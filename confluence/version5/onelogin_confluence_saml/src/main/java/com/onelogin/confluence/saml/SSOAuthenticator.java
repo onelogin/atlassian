@@ -61,7 +61,7 @@ public class SSOAuthenticator extends ConfluenceAuthenticator {
     @Override
     public Principal getUser(HttpServletRequest request, HttpServletResponse response) {
         
-        log.debug(" getUser ");
+        //log.debug(" getUser ");
         //System.out.println(" getUser ");
         Principal user = null;
         
@@ -75,7 +75,7 @@ public class SSOAuthenticator extends ConfluenceAuthenticator {
 			String os_destination = request.getParameter("os_destination");
 			if (os_destination != null){
 				request.getSession().setAttribute("os_destination", os_destination);
-				log.warn(" os_destination: " + os_destination);
+				log.info(" os_destination: " + os_destination);
 				//System.out.println(" os_destination: " + os_destination);
 				
 			}
@@ -86,7 +86,6 @@ public class SSOAuthenticator extends ConfluenceAuthenticator {
 			try {
 
 				if (sSAMLResponse == null) {
-
 	                // The appSettings object contain application specific settings used by the SAML library
 	                AppSettings appSettings = new AppSettings();
 
@@ -107,12 +106,12 @@ public class SSOAuthenticator extends ConfluenceAuthenticator {
 	                String relayState = null;
 	                if(os_destination != null){
 	                	relayState = request.getRequestURL().toString().replace(request.getRequestURI(), os_destination);
-	                	//request.getSession().setAttribute("RelayState", relayState);
 	                 }
-	                reqString = authReq.getSSOurl(accSettings.getIdp_sso_target_url(), relayState);   			
-	                log.debug("reqString : " +reqString );
-	                //System.out.println("reqString : " +reqString );
-	                request.getSession().setAttribute("reqString", reqString);
+	                reqString = authReq.getSSOurl(accSettings.getIdp_sso_target_url(), relayState);
+                    //System.out.println("reqString : " +reqString );
+                    log.debug("reqString : " +reqString );
+                    request.getSession().setAttribute("reqString", reqString);
+					
 				} else {
             	
 	            	//System.out.println("SAML Response not null");
@@ -126,13 +125,12 @@ public class SSOAuthenticator extends ConfluenceAuthenticator {
 	
 	               Response samlResponse = getSamlResponse(configValues.get("certificate"),request.getParameter("SAMLResponse"));
 	
-					if (samlResponse.isValid()) {
+					if (samlResponse != null && samlResponse.isValid()) {
 					    // The signature of the SAML Response is valid. The source is trusted
 					    String sNameId = samlResponse.getNameId();
 					    log.info(String.format("Checking internal DB for user %s", sNameId));
 					    //System.out.println(String.format("Checking internal DB for user %s", sNameId));
 					    user = getUser(sNameId);
-					    
 					    if (user == null){
 					      log.info(String.format("User %s not found within local DB, searching directories...", sNameId));
 					      //System.out.println(String.format("User %s not found within local DB, searching directories...", sNameId));
@@ -152,13 +150,19 @@ public class SSOAuthenticator extends ConfluenceAuthenticator {
 							log.warn("User sucessfully logged in " + sNameId);
 							//String relayState = request.getSession().getAttribute("RelayState").toString();
 							if(request.getParameter("RelayState") != null){
-								String relayState = request.getParameter("RelayState").toString();
-								System.out.println("relayState: "+ relayState);
-								if(!relayState.isEmpty() && relayState.contains(request.getServerName())){
-									response.sendRedirect(relayState);
 									
-								}
-		                    }
+								String relayState = request.getParameter("RelayState").toString();
+								if(!relayState.isEmpty() && relayState.contains(request.getServerName())){
+									request.getSession().setAttribute("os_destination", relayState);
+									request.getSession().setAttribute("redirect", true);
+								}else{
+                               	 //System.out.println(" relayState invalid:[" + relayState+ "]");
+                               	 log.info(" relayState invalid:[" + relayState+ "]");
+                               }
+		                    }else{
+								 //System.out.println(" Not relayState found redicect to home");
+								 log.info("Not relayState found redicect to home");
+							}
 	                    }else{
 	                        log.error("user: "+sNameId+" could not be found");
 	                        //System.out.println("user: "+sNameId+" could not be found");

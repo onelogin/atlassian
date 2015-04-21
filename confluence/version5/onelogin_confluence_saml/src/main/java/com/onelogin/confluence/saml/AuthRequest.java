@@ -70,9 +70,12 @@ public class AuthRequest {
 	public String getSSOurl(String IdpSsoTargetUrl, String... parameters) throws Exception
 	{
 		String ssourl = IdpSsoTargetUrl+"?SAMLRequest=" + URLEncoder.encode(getRequest(base64),"UTF-8");
-		String relayState = parameters.length > 0 ? parameters[0] : "";
-		if(relayState != null && !relayState.isEmpty()){
-			ssourl = ssourl + "&RelayState=" + relayState;
+		
+		if(parameters != null){
+			String relayState = parameters.length > 0 ? parameters[0] : "";
+			if(relayState != null && !relayState.isEmpty()){
+				ssourl = ssourl + "&RelayState=" + relayState;
+			}
 		}
 		return ssourl;
 	}
