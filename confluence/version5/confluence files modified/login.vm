@@ -1,0 +1,170 @@
+#* @vtlvariable name="action" type="com.atlassian.confluence.user.actions.LoginAction" *#
+#macro (errorBlock $msg)
+<div class="error" tabindex="0"><p>$msg</p></div>
+#end
+
+#set($showSignup = $action.isShowSignUp())
+
+<html>
+	<head>
+        #requireResource("confluence.web.resources:master-styles")
+        #requireResource("confluence.web.resources:login")
+        #requireResource("confluence.web.resources:aui-forms")
+	    #if( $fromNotPermitted )
+		    <title>$i18n.getText("title.not.permitted")</title>
+	    #else
+		    <title>$action.getActionName($action.getClass().getName())</title>
+		    <content tag="pageTitle"><a href="${req.contextPath}/homepage.action">$action.globalSettings.siteTitle</a></content>
+		#end
+		
+		#if(!$req.getParameter("samlInvalid"))
+			#if( !$req.getParameter("SAMLResponse") && !$req.getParameter("oneloginreq") && !$req.getParameter("logout"))
+                    $res.sendRedirect($req.getSession().getAttribute("reqString"));
+            #end
+        #end
+        
+            #if( $req.getSession() && $req.getSession().getAttribute("seraph_defaultauthenticator_user") )
+                    $res.sendRedirect("/pages/viewpage.action?pageId=1245557");
+            #end
+
+	</head>
+	<body>
+		
+        <content tag="bodyClass">login</content>
+		#if($showSignup)
+		#requireResource("confluence.web.resources:signup")
+		<script>
+			AJS.$('#com-atlassian-confluence.login h1').addClass('unified-header');
+		</script>
+		#end
+
+        <div id="login-container" #if($showSignup)class="unified-container"#end>
+        #if ($remoteUser)
+            <div class="login-section">
+                <h2>$action.getText('login.name')</h2>
+                #parse ('/template/includes/actionerrors.vm')
+                <p>$i18n.getText('login.logged.in', $generalUtil.htmlEncodeAndReplaceSpaces($remoteUser.name))</p>
+                <p class="last">$i18n.getText('login.logged.in.description')</p>
+            </div>
+        #else
+			<div class="login-section #if($showSignup)unified#end">
+                #applyDecorator("form-aui")
+                    #decoratorParam("formName" "loginform")
+                    #decoratorParam("submitAction"  "$req.contextPath/dologin.action")
+                    #decoratorParam("editAction" "$req.contextPath/login.action")
+                    #decoratorParam("editMode" "true")
+                    #decoratorParam("formStyle" "login-form-container")
+
+                    <h2>$action.getText('login.name')</h2>
+
+                    #if($logout)
+                        <div id="logout-message" class="aui-message success shadowed closeable">
+                            <p>$i18n.getText("successful.logout.message")</p>
+                        </div>
+                    #end
+                    #parse ('/template/includes/actionerrors.vm')
+                    <fieldset class="compact-form-fields">
+                        #assistiveLegend("accessibility.form.login")
+                        #bodytag( "TextField" "label='username.accesskey'" "name='os_username'" "theme='aui'")
+                            #param("focus" "0")
+                            #param("placeholder" $i18n.getText("username.name"))
+                        #end
+                        #bodytag( "Password" "label='password.accesskey'" "name='os_password'" "theme='aui'")
+                            #param("placeholder" $i18n.getText("password.name"))
+                        #end
+                        #if($action.isElevatedSecurityCheckRequired())
+                            <div id="captcha-container" class="field-group">
+                                <label id="captcha-reponse-label" for="captcha-response">
+                                    ## link in login.elevatedsecuritycheck.assistive has 'tabindex="5"'
+                                    <span class="assistive">$i18n.getText("login.elevatedsecuritycheck.assistive")</span>
+                                </label>
+                                #set($captchaId = $captchaManager.generateCaptchaId())
+                                ## assign reload a tabindex greater than 0 to remove it from the default tab order
+                                <a class="reload" href="${req.contextPath}/dologin.action?os_username=${action.os_username}" tabindex="1" title="$generalUtil.escapeXml($i18n.getText('login.elevatedsecuritycheck.captcha.reload.title'))">
+                                    <img src="${req.contextPath}/images/icons/refresh_grey_16.png" alt="$generalUtil.escapeXml($i18n.getText('login.elevatedsecuritycheck.captcha.reload.alt'))" />
+                                </a>
+                                #captchaImage($captchaId)
+                            </div>
+                            <div class="field-group">
+                                <input id="captcha-response" class="text" type="text" name="captchaResponse" value="" placeholder="$i18n.getText('captcha.challenge')">
+                                #fielderrorAUI('captcha')
+                            </div>
+                        #end
+
+                        #if ($action.shouldRememberMeCheckboxBeOmitted())
+                            <input type="hidden" name="os_cookie" value="true"/>
+                        #else
+                            #bodytag( "Component" "label='remember.accesskey'" "name='os_cookie'" "value='false'" "theme='aui'" "template='onofflist.vm'") #end
+                        #end
+                        <div class="field-group form-buttons compact-form-buttons">
+                            <input id="loginButton" class="aui-button aui-style aui-button-primary" name="login" type="submit" value="$i18n.getText('login.button')"/>
+                            #if ($action.isShowForgottenPasswordHelp())
+                                <a id="forgot-password" class="aui-button aui-style aui-button-link" href="${req.contextPath}/forgotuserpassword.action">$i18n.getText("forgot.password")</a>
+                            #end
+                        </div>
+                        <input type="text" name="os_destination" value="$!generalUtil.refineOsDestination($!os_destination)"/>
+                    </fieldset>
+                    #if ($showSignup)
+                        <div id="signupMessage"><p>$i18n.getText("signup.for.an.account", "<a href='$action.getSignupURL()'>", "</a>")</p></div>
+                    #end
+                #end
+                </div> ## login-section
+
+            #if ($showSignup)
+            <div class="signup-section">
+	            #applyDecorator("form-aui")
+	                #decoratorParam("formName" "signupform")
+	                #decoratorParam("submitAction" "$req.contextPath/dosignup.action")
+	                #decoratorParam("editAction" "$req.contextPath/signup.action")
+	                #decoratorParam("editMode" "true")
+	                #decoratorParam("formStyle" "login-form-container signup")
+	                #decoratorParam("autocompleteDisabled" true)
+
+	                <h2>$action.getText("sign.up")</h2>
+
+                    <fieldset class="right-aligned-form-fields">
+	                    #assistiveLegend("accessibility.signup.legend")
+	                    #bodytag( "TextField" "label='fullname.name.bothcaps'" "name='fullName'" "theme='aui'" )
+                            #param("focus" "0")
+                            #param("placeholder" $i18n.getText("fullname.name.bothcaps"))
+                        #end
+                        #bodytag( "TextField" "label='email.name'" "name='email'" "theme='aui'" )
+	                        #param("type" "email")
+                            #param("placeholder" $i18n.getText("email.name"))
+	                    #end
+	                    #bodytag( "TextField" "label='username.name'" "name='username'" "theme='aui'" )
+                            #param("placeholder" $i18n.getText("username.name"))
+                        #end
+                        #bodytag( "Password" "label='password.name'" "name='password'" "theme='aui'" )
+                            #param("placeholder" $i18n.getText("password.name"))
+                        #end
+                        #bodytag( "Password" "label='confirm.password.name'" "name='confirm'" "theme='aui'" )
+                            #param("placeholder" $i18n.getText("confirm.password.name"))
+                        #end
+                        #tag( "Hidden" "name='token'" "value='$!action.token'" )
+
+                        #parse ("/pages/includes/captcha-form-elements.vm")
+
+	                    <div class="field-group form-buttons compact-form-buttons">
+                            <input id="signupButton" class="aui-button aui-style aui-button-primary" name="signupButton" type="submit" value="$i18n.getText('sign.up')" />
+	                    </div>
+	                </fieldset>
+                    <div id="loginMessage"><p>$i18n.getText("signup.for.an.account.login", "<a href='$req.contextPath/login.action'>", "</a>")</p></div>
+	            #end
+            </div> ## signup-section
+            #end
+        #end
+        </div>
+        #if ($action.isBrowserLanguageEnabled())
+            <content tag="login-language">
+                <ul id="login-language">
+                    #foreach ($lang in $action.getInstalledLanguages())
+                        <li>
+                            <a href="$req.contextPath/login.action?language=$lang.name">$lang.capitalDisplayName</a>
+                        </li>
+                    #end
+                </ul>
+            </content>
+        #end
+	</body>
+</html>
