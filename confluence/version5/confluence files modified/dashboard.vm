@@ -1,0 +1,22 @@
+<html>
+<head>
+    <title>$action.getText("title.dashboard") One Login 
+      #if( $req.getSession() && $req.getSession().getAttribute("redirect") )
+            $req.getSession().setAttribute("redirect",false)
+            $res.sendRedirect($req.getSession().getAttribute("os_destination"))
+      #end
+     </title>
+         
+</head>
+<body>
+	
+    <content tag="bodyClass">dashboard</content>
+    <div class='PageContent'>
+        #applyDecorator("root")
+            #decoratorParam("context" "global")
+            #decoratorParam("mode"  "dashboard")
+            #decoratorParam("helper" $action.helper)
+        #end
+    </div>
+</body>
+</html>
