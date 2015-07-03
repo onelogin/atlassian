@@ -4,7 +4,7 @@
 
   <groupId>com.onelogin</groupId>
   <artifactId>customauth-jira</artifactId>
-  <version>6.1.1</version>
+  <version>6.1.2</version>
   <packaging>jar</packaging>
 
   <name>onelogin_jira_saml_6</name>
@@ -16,20 +16,25 @@
 
   <dependencies>
     <dependency>
-    <groupId>log4j</groupId>
-    <artifactId>log4j</artifactId>
-    <version>1.2.15</version>
-    <scope>provided</scope>
-    <exclusions>
-        <exclusion>
-          <groupId>com.sun.jdmk</groupId>
-          <artifactId>jmxtools</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>com.sun.jmx</groupId>
-          <artifactId>jmxri</artifactId>
-        </exclusion>
-    </exclusions>
+      <groupId>com.onelogin</groupId>
+      <artifactId>java-saml</artifactId>
+      <version>1.1</version>
+    </dependency>
+    <dependency>
+	    <groupId>log4j</groupId>
+	    <artifactId>log4j</artifactId>
+	    <version>1.2.15</version>
+	    <scope>provided</scope>
+	    <exclusions>
+	        <exclusion>
+	          <groupId>com.sun.jdmk</groupId>
+	          <artifactId>jmxtools</artifactId>
+	        </exclusion>
+	        <exclusion>
+	          <groupId>com.sun.jmx</groupId>
+	          <artifactId>jmxri</artifactId>
+	        </exclusion>
+	    </exclusions>
     </dependency>
     <dependency>
       <groupId>commons-codec</groupId>
@@ -70,11 +75,11 @@
           <exclusion>
             <groupId>commons-jrcs</groupId>
             <artifactId>commons-jrcs</artifactId>
-          </exclusion>          
+          </exclusion>
           <exclusion>
             <groupId>csv</groupId>
             <artifactId>csv</artifactId>
-          </exclusion>                    
+          </exclusion>
           <exclusion>
             <groupId>datafile</groupId>
             <artifactId>datafile</artifactId>
@@ -82,43 +87,43 @@
           <exclusion>
             <groupId>glue</groupId>
             <artifactId>glue</artifactId>
-          </exclusion>          
+          </exclusion>
           <exclusion>
             <groupId>com.sun</groupId>
             <artifactId>jai_codec</artifactId>
-          </exclusion>          
+          </exclusion>
           <exclusion>
             <groupId>com.sun</groupId>
             <artifactId>jai_core</artifactId>
-          </exclusion>          
+          </exclusion>
           <exclusion>
             <groupId>javacvs</groupId>
             <artifactId>javacvs</artifactId>
-          </exclusion>          
+          </exclusion>
           <exclusion>
             <groupId>com.octo.captcha</groupId>
             <artifactId>jcaptcha</artifactId>
-          </exclusion>          
+          </exclusion>
           <exclusion>
             <groupId>com.octo.captcha</groupId>
             <artifactId>jcaptcha-api</artifactId>
-          </exclusion>          
+          </exclusion>
           <exclusion>
             <groupId>jndi</groupId>
             <artifactId>jndi</artifactId>
-          </exclusion>		  
+          </exclusion>
           <exclusion>
             <groupId>jotm</groupId>
             <artifactId>jonas_timer</artifactId>
-          </exclusion>          
+          </exclusion>
           <exclusion>
             <groupId>jotm</groupId>
             <artifactId>jotm</artifactId>
-          </exclusion>          
+          </exclusion>
           <exclusion>
             <groupId>jotm</groupId>
             <artifactId>jotm-iiop_stubs</artifactId>
-          </exclusion>          
+          </exclusion>
           <exclusion>
             <groupId>jotm</groupId>
             <artifactId>jotm-jrmp_stubs</artifactId>
@@ -126,67 +131,67 @@
           <exclusion>
             <groupId>jsch</groupId>
             <artifactId>jsch</artifactId>
-          </exclusion>          
+          </exclusion>
           <exclusion>
             <groupId>jta</groupId>
             <artifactId>jta</artifactId>
-          </exclusion>          
+          </exclusion>
           <exclusion>
             <groupId>jtidy</groupId>
             <artifactId>jtidy</artifactId>
-          </exclusion>          
+          </exclusion>
           <exclusion>
             <groupId>jzlib</groupId>
             <artifactId>jzlib</artifactId>
-          </exclusion>          
+          </exclusion>
           <exclusion>
             <groupId>jotm</groupId>
             <artifactId>objectweb-datasource</artifactId>
-          </exclusion>          
+          </exclusion>
           <exclusion>
             <groupId>opensymphony</groupId>
             <artifactId>oscore</artifactId>
-          </exclusion>          
+          </exclusion>
           <exclusion>
             <groupId>opensymphony</groupId>
             <artifactId>osworkflow</artifactId>
-          </exclusion>          
+          </exclusion>
           <exclusion>
             <groupId>ots-jts</groupId>
             <artifactId>ots-jts</artifactId>
-          </exclusion>          
+          </exclusion>
           <exclusion>
             <groupId>webwork</groupId>
             <artifactId>pell-multipart-request</artifactId>
-          </exclusion>          
+          </exclusion>
           <exclusion>
             <groupId>opensymphony</groupId>
             <artifactId>propertyset</artifactId>
-          </exclusion>          
+          </exclusion>
           <exclusion>
             <groupId>radeox</groupId>
             <artifactId>radeox</artifactId>
-          </exclusion>          
+          </exclusion>
           <exclusion>
             <groupId>saxon</groupId>
             <artifactId>saxon-noaelfred</artifactId>
-          </exclusion>          
+          </exclusion>
           <exclusion>
             <groupId>statcvs</groupId>
             <artifactId>statcvs</artifactId>
-          </exclusion>          
+          </exclusion>
           <exclusion>
             <groupId>velocity</groupId>
             <artifactId>velocity</artifactId>
-          </exclusion>          
+          </exclusion>
           <exclusion>
             <groupId>opensymphony</groupId>
             <artifactId>webwork</artifactId>
-          </exclusion>          
+          </exclusion>
           <exclusion>
             <groupId>xapool</groupId>
             <artifactId>xapool</artifactId>
-          </exclusion>                    
+          </exclusion>
       </exclusions>
     </dependency>
     <dependency>
@@ -195,6 +200,11 @@
       <version>6.0</version>
       <type>jar</type>
     </dependency>
+    <dependency>
+		<groupId>org.apache.cxf</groupId>
+		<artifactId>cxf-bundle-jaxrs</artifactId>
+		<version>2.7.16</version>
+	</dependency>
   </dependencies>
   <repositories>
 		<repository>
@@ -214,7 +224,7 @@
 		  <id>repository.jboss.org-public</id>
 		  <name>JBoss.org Maven repository</name>
 		  <url>https://repository.jboss.org/nexus/content/groups/public</url>
-		</repository>  
+		</repository>
 	</repositories>
 	<build>
 	   <plugins>
@@ -235,7 +245,31 @@
 				   <mainClass>com.onelogin.jira.saml.TstAuthRequest</mainClass>
 			   </configuration>
 		   </plugin>
+	       <plugin>
+	        <groupId>org.apache.maven.plugins</groupId>
+	        <artifactId>maven-shade-plugin</artifactId>
+	        <version>2.4</version>
+	        <executions>
+	          <execution>
+	            <phase>package</phase>
+	            <goals>
+	              <goal>shade</goal>
+	            </goals>
+	            <configuration>
+	              <artifactSet>
+	                <includes>
+	                  <include>com.onelogin:java-saml</include>
+	                  <include>org.apache.cxf:cxf-bundle-jaxrs</include>
+	                </includes>
+	              </artifactSet>
+	            </configuration>
+	          </execution>
+	        </executions>
+	        <configuration>
+	          <shadedArtifactAttached>false</shadedArtifactAttached>
+	          <finalName>${artifactId}-${version}</finalName>
+			</configuration>
+	       </plugin>
 	   </plugins>
 	</build>
-	
 </project>
