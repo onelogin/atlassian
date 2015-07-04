@@ -35,6 +35,7 @@ public class SSOAuthenticator extends DefaultAuthenticator {
 	public Principal getUser(HttpServletRequest request,
 			HttpServletResponse response) {
 
+		log.debug("getUser  ");
 		Principal user = null;
 
 		if (request.getSession() != null && 
@@ -53,7 +54,7 @@ public class SSOAuthenticator extends DefaultAuthenticator {
 			}
 
 			String sSAMLResponse = request.getParameter("SAMLResponse");
-			log.debug("get SAMLResponse");
+			log.debug("get SAMLResponse  " + sSAMLResponse);
 
 			try {
 				if (sSAMLResponse == null) {
@@ -103,12 +104,14 @@ public class SSOAuthenticator extends DefaultAuthenticator {
 														    request.getParameter("SAMLResponse"),
 														    request.getRequestURL().toString());
 
+					
 					if (samlResponse.isValid()) {
 						// The signature of the SAML Response is valid. The
 						// source is trusted
 						final String nameId = samlResponse.getNameId();
 						user = getUser(nameId);
 						log.debug(" SAML user :" + user);
+						
 
 						if (user != null) {
 							putPrincipalInSessionContext(request, user);

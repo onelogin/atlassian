@@ -18,47 +18,36 @@ public class AuthRequestAtlassian extends AuthRequest{
 		super(appSettings, accountSettings);
 	}
 
+	// Required because atlassian have conflicts with XMLOutputFactory implementation
+	// Avoid use specialized classes and XMLOutputFactory.newInstance()
+	
 	public String getRequest(int format) throws XMLStreamException, IOException {
-		String result = "";
+		String result = null;
 
 		ByteArrayOutputStream baos = new ByteArrayOutputStream();
-		
-		XMLStreamWriter writer = StaxUtils.createXMLStreamWriter(baos);
 
-		writer.writeStartElement("samlp", "AuthnRequest", "urn:oasis:names:tc:SAML:2.0:protocol");
-		writer.writeNamespace("samlp","urn:oasis:names:tc:SAML:2.0:protocol");
+		String sBaos = "<samlp:AuthnRequest xmlns:samlp='urn:oasis:names:tc:SAML:2.0:protocol' ID='"
+				+ id
+				+ "' Version='2.0' IssueInstant='"
+				+ this.issueInstant
+				+ "' ProtocolBinding='urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST' AssertionConsumerServiceURL='"
+				+ this.appSettings.getAssertionConsumerServiceUrl()
+				+ "'>"
+				+ "<saml:Issuer xmlns:saml='urn:oasis:names:tc:SAML:2.0:assertion'>"
+				+ this.appSettings.getIssuer()
+				+ "</saml:Issuer>"
+				+ "<samlp:NameIDPolicy Format='urn:oasis:names:tc:SAML:2.0:nameid-format:unspecified' AllowCreate='true'>"
+				+ "</samlp:NameIDPolicy>"
+				+ "<samlp:RequestedAuthnContext Comparison='exact'>"
+				+ "</samlp:RequestedAuthnContext>"
+				+ "<saml:AuthnContextClassRef xmlns:saml='urn:oasis:names:tc:SAML:2.0:assertion'>urn:oasis:names:tc:SAML:2.0:ac:classes:PasswordProtectedTransport</saml:AuthnContextClassRef>"
+				+ "</samlp:AuthnRequest>";
 
-		writer.writeAttribute("ID", super.id);
-		writer.writeAttribute("Version", "2.0");
-		writer.writeAttribute("IssueInstant", super.issueInstant);
-		writer.writeAttribute("ProtocolBinding", "urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST");
-		writer.writeAttribute("AssertionConsumerServiceURL", super.appSettings.getAssertionConsumerServiceUrl());
-
-		writer.writeStartElement("saml","Issuer","urn:oasis:names:tc:SAML:2.0:assertion");
-		writer.writeNamespace("saml","urn:oasis:names:tc:SAML:2.0:assertion");
-		writer.writeCharacters(super.appSettings.getIssuer());
-		writer.writeEndElement();
-
-		writer.writeStartElement("samlp", "NameIDPolicy", "urn:oasis:names:tc:SAML:2.0:protocol");
-
-		writer.writeAttribute("Format", "urn:oasis:names:tc:SAML:2.0:nameid-format:unspecified");
-		writer.writeAttribute("AllowCreate", "true");
-		writer.writeEndElement();
-
-		writer.writeStartElement("samlp","RequestedAuthnContext","urn:oasis:names:tc:SAML:2.0:protocol");
-
-		writer.writeAttribute("Comparison", "exact");
-
-		writer.writeStartElement("saml","AuthnContextClassRef","urn:oasis:names:tc:SAML:2.0:assertion");
-		writer.writeNamespace("saml", "urn:oasis:names:tc:SAML:2.0:assertion");
-		writer.writeCharacters("urn:oasis:names:tc:SAML:2.0:ac:classes:PasswordProtectedTransport");
-		writer.writeEndElement();
-
-		writer.writeEndElement();
-		writer.writeEndElement();
-		writer.flush();
-                
-		result = encodeSAMLRequest(baos.toByteArray());
+		// System.out.println("sBaos : " +sBaos);
+		baos.write(sBaos.getBytes());
+		if (format == base64) {
+			result = encodeSAMLRequest(baos.toByteArray());
+		}
 		return result;
 	}
 
