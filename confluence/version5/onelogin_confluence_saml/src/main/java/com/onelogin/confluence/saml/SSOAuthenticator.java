@@ -1,14 +1,10 @@
 package com.onelogin.confluence.saml;
 
-import java.io.IOException;
 import java.security.Principal;
-import java.security.cert.CertificateException;
 import java.util.HashMap;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import javax.xml.parsers.ParserConfigurationException;
-import javax.xml.xpath.XPathExpressionException;
 
 import org.apache.log4j.Logger;
 import org.springframework.transaction.PlatformTransactionManager;
@@ -18,7 +14,6 @@ import org.springframework.transaction.interceptor.DefaultTransactionAttribute;
 import org.springframework.transaction.interceptor.TransactionAttribute;
 import org.springframework.transaction.support.TransactionCallback;
 import org.springframework.transaction.support.TransactionTemplate;
-import org.xml.sax.SAXException;
 
 import com.atlassian.confluence.event.events.security.LoginEvent;
 import com.atlassian.confluence.event.events.security.LoginFailedEvent;
@@ -47,10 +42,17 @@ import com.atlassian.user.User;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
+import com.onelogin.AccountSettings;
+import com.onelogin.AppSettings;
+import com.onelogin.saml.Response;
 
 public class SSOAuthenticator extends ConfluenceAuthenticator {
 
-    private static final Logger log = Logger.getLogger(SSOAuthenticator.class);
+    /**
+	 * 
+	 */
+	private static final long serialVersionUID = -5777926076310717564L;
+	private static final Logger log = Logger.getLogger(SSOAuthenticator.class);
     public String reqString = "";
 
     public SSOAuthenticator() {
@@ -81,7 +83,7 @@ public class SSOAuthenticator extends ConfluenceAuthenticator {
 			}
 			
 			String sSAMLResponse = request.getParameter("SAMLResponse");
-			boolean samlResponseValidated = false;
+			//boolean samlResponseValidated = false;
 			
 			try {
 
@@ -102,14 +104,14 @@ public class SSOAuthenticator extends ConfluenceAuthenticator {
 	                accSettings.setIdpSsoTargetUrl(configValues.get("idpSsoTargetUrl"));
 
 	                // Generate an AuthRequest and send it to the identity provider
-	                AuthRequest authReq = new AuthRequest(appSettings, accSettings);
+	                AuthRequestAtlassian authReq = new AuthRequestAtlassian(appSettings, accSettings);
+	                log.debug("Generated AuthRequest and send it to the identity provider ");
 	                String relayState = null;
 	                if(os_destination != null){
 	                	relayState = request.getRequestURL().toString().replace(request.getRequestURI(), os_destination);
 	                 }
-	                reqString = authReq.getSSOurl(accSettings.getIdp_sso_target_url(), relayState);
-                    //System.out.println("reqString : " +reqString );
-                    log.debug("reqString : " +reqString );
+	                reqString = authReq.getSSOurl(relayState);
+					log.debug("reqString : " + reqString);
                     request.getSession().setAttribute("reqString", reqString);
 					
 				} else {
@@ -123,7 +125,7 @@ public class SSOAuthenticator extends ConfluenceAuthenticator {
 	               final String remoteHost = request.getRemoteHost();
 	
 	
-	               Response samlResponse = getSamlResponse(configValues.get("certificate"),request.getParameter("SAMLResponse"));
+	               Response samlResponse = getSamlResponse(configValues.get("certificate"),request.getParameter("SAMLResponse"), request.getRequestURL().toString());
 	
 					if (samlResponse != null && samlResponse.isValid()) {
 					    // The signature of the SAML Response is valid. The source is trusted
@@ -135,9 +137,11 @@ public class SSOAuthenticator extends ConfluenceAuthenticator {
 					      log.info(String.format("User %s not found within local DB, searching directories...", sNameId));
 					      //System.out.println(String.format("User %s not found within local DB, searching directories...", sNameId));
 					      user = validateLdapUser(sNameId);
+					    }else{
+					    	log.debug(" SAML user :" + user);
 					    }
-                    
-	                    if(user!=null){
+					    
+					    if(user!=null){
 	                        log.info("login from user: "+sNameId );
 	                        //System.out.println("login from user: "+sNameId );
 	                        putPrincipalInSessionContext(request, user);
@@ -155,6 +159,7 @@ public class SSOAuthenticator extends ConfluenceAuthenticator {
 								if(!relayState.isEmpty() && relayState.contains(request.getServerName())){
 									request.getSession().setAttribute("os_destination", relayState);
 									request.getSession().setAttribute("redirect", true);
+									log.info("redirect to ->" + relayState);
 								}else{
                                	 //System.out.println(" relayState invalid:[" + relayState+ "]");
                                	 log.info(" relayState invalid:[" + relayState+ "]");
@@ -178,7 +183,7 @@ public class SSOAuthenticator extends ConfluenceAuthenticator {
 					log.warn(sSAMLResponse);
 					//System.out.println(sSAMLResponse);
                 }
-				samlResponseValidated = true;
+				//samlResponseValidated = true;
             } 
 
         } catch (Exception e) {
@@ -202,14 +207,17 @@ public class SSOAuthenticator extends ConfluenceAuthenticator {
         return configValues;
     }
 
-    private Response getSamlResponse(String certificate,String responseEncrypted) throws CertificateException, ParserConfigurationException, SAXException, IOException, XPathExpressionException {
-        // User account specific settings. Import the certificate here
-        AccountSettings accountSettings = new AccountSettings();
-        accountSettings.setCertificate(certificate);
+    private Response getSamlResponse(String certificate,
+    		String responseEncrypted,
+    		String relayState) throws Exception {
+    	AccountSettings accountSettings = new AccountSettings();
+    	accountSettings.setCertificate(certificate);
 
-        Response samlResponse = new Response(accountSettings);
-        samlResponse.loadXmlFromBase64(responseEncrypted);
-        return samlResponse;
+    	Response samlResponse = new Response(accountSettings,
+    			responseEncrypted,
+    			relayState);
+    	log.debug("samlResponse" + samlResponse.toString());
+    	return samlResponse;
     }
 
 
