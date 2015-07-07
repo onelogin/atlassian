@@ -5,7 +5,7 @@
 
     <groupId>com.onelogin</groupId>
     <artifactId>customauth-conf5</artifactId>
-    <version>0.5</version>
+    <version>0.6</version>
     <packaging>jar</packaging>
 
     <name>onelogin_confluence_saml_5</name>
@@ -78,18 +78,6 @@
                 </exclusion>
             </exclusions>
         </dependency>
-        <dependency>
-            <groupId>javax</groupId>
-            <artifactId>javaee-web-api</artifactId>
-            <version>6.0</version>
-            <type>jar</type>
-            <scope>compile</scope>
-        </dependency>
-        <dependency>
-			<groupId>org.apache.cxf</groupId>
-			<artifactId>cxf-bundle-jaxrs</artifactId>
-			<version>2.7.16</version>
-		</dependency>
     </dependencies>
     <repositories>
 		<repository>
