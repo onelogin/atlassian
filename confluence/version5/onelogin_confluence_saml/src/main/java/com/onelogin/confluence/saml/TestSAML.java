@@ -3,6 +3,8 @@ package com.onelogin.confluence.saml;
 import java.security.Principal;
 
 import com.atlassian.user.User;
+import com.onelogin.AccountSettings;
+import com.onelogin.saml.Response;
 
 public class TestSAML {
 

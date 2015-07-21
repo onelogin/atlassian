@@ -5,7 +5,7 @@
 
     <groupId>com.onelogin</groupId>
     <artifactId>customauth-conf5</artifactId>
-    <version>0.5</version>
+    <version>0.6</version>
     <packaging>jar</packaging>
 
     <name>onelogin_confluence_saml_5</name>
@@ -16,6 +16,27 @@
     </properties>
 
     <dependencies>
+	    <dependency>
+	      <groupId>com.onelogin</groupId>
+	      <artifactId>java-saml</artifactId>
+	      <version>1.1.2</version>
+	    </dependency>
+	    <dependency>
+		    <groupId>log4j</groupId>
+		    <artifactId>log4j</artifactId>
+		    <version>1.2.15</version>
+		    <scope>provided</scope>
+		    <exclusions>
+		        <exclusion>
+		          <groupId>com.sun.jdmk</groupId>
+		          <artifactId>jmxtools</artifactId>
+		        </exclusion>
+		        <exclusion>
+		          <groupId>com.sun.jmx</groupId>
+		          <artifactId>jmxri</artifactId>
+		        </exclusion>
+		    </exclusions>
+	    </dependency>
         <dependency>
             <groupId>commons-codec</groupId>
             <artifactId>commons-codec</artifactId>
@@ -43,18 +64,19 @@
             <type>jar</type>
             <scope>compile</scope>
             <exclusions>
+	            <exclusion>
+		            <groupId>velocity</groupId>
+		            <artifactId>velocity</artifactId>
+		        </exclusion>
+		        <exclusion>
+		            <groupId>opensymphony</groupId>
+		            <artifactId>webwork</artifactId>
+		        </exclusion>
                 <exclusion>
                     <groupId>opensymphony</groupId>
                     <artifactId>oscore</artifactId>
                 </exclusion>
             </exclusions>
-        </dependency>
-        <dependency>
-            <groupId>javax</groupId>
-            <artifactId>javaee-web-api</artifactId>
-            <version>6.0</version>
-            <type>jar</type>
-            <scope>compile</scope>
         </dependency>
     </dependencies>
     <repositories>
@@ -89,6 +111,31 @@
 				   <mainClass>com.onelogin.confluence.saml.TestSAML</mainClass>
 			   </configuration>
 		   </plugin>
+		   <plugin>
+	        <groupId>org.apache.maven.plugins</groupId>
+	        <artifactId>maven-shade-plugin</artifactId>
+	        <version>2.4</version>
+	        <executions>
+	          <execution>
+	            <phase>package</phase>
+	            <goals>
+	              <goal>shade</goal>
+	            </goals>
+	            <configuration>
+	              <artifactSet>
+	                <includes>
+	                  <include>com.onelogin:java-saml</include>
+	                  <include>org.apache.cxf:cxf-bundle-jaxrs</include>
+	                </includes>
+	              </artifactSet>
+	            </configuration>
+	          </execution>
+	        </executions>
+	        <configuration>
+	          <shadedArtifactAttached>false</shadedArtifactAttached>
+	          <finalName>${project.artifactId}-${project.version}</finalName>
+			</configuration>
+	       </plugin>
 	   </plugins>
 	</build>
 </project>

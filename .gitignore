@@ -14,3 +14,4 @@ jira/version6/onelogin_jira_saml/.settings/org.eclipse.jdt.core.prefs
 jira/version5/onelogin_jira_saml/.classpath
 
 jira/version5/onelogin_jira_saml/.project
+dependency-reduced-pom.xml
