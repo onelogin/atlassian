@@ -3,8 +3,8 @@
 
 Overview
 -----
-The included projects are for the purpose of autheticating with Atlassian's Jira and Confluence. 
-Documentation for setting up a particular project for a particular purposes is included in each project. 
+The included projects are for the purpose of autheticating with Atlassian's Jira and Confluence. These projects are largely based on work from the public onelogin github repo java-saml. For details on how to work with SAML and onelogin in general please refer to that project. 
+Documentation for setting up a particular Atlassian project is included in each are of this repo. 
 That is to say documentation for setting up and configuring Confluence is in the confluence directory. 
 Documentation for Jira is in the Jira directories.
 
