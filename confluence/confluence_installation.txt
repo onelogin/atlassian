@@ -1,0 +1,38 @@
+Installing and configuring the Confluence plugin
+
+1. Copy the following files to the machine that hosts your Confluence service: 
+	customauth-conf5-0.6.jar 
+	conf_onelogin.xml 
+Ensure that your CONFLUENCE_USER has read permissions on these files. To perform this configuration, you must be logged in as a user with write permissions on these files and the files in your CONFLUENCE_INSTALL directory. 
+
+2.	Edit conf_onelogin.xml to add the X.509 certificate and SAML 2.0 Endpoint that you copied above. Paste the certificate between the <certificate></certificate> tags, removing all line feeds or carriage returns in the certificate value. 
+
+Paste the SAML 2.0 Endpoint between the <ssotarget></ssotarget> tags. 
+
+<config><certificate>MIICMTCCAiWgAwIBAgIBATADBgEAMGcxCzAJBgNVBAYTAlVTMRMwEQYDVQQIDApDYWxpZm9ybmlhMRUwEwYDVQQHDAMA8GA1UECgwIT25lTG9naW4xGTAXBgNVBAMMEGFwcC5vbmVsb2dpbi5jb20wggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQDKvNTqqXMUv2kbVIaAeov5qOaVrbDQwj/65aaCs8CuXwC1Ks69Z3/D5qGHLDqVCR7+BhbVEiZRK/tb/LcW1qsFySXlgbGY5zqvHXjQ2ChYDofpTV8iMr7klHBXweP+pxvrknsmMUxlmaH7gcvRBN9UkdXds0pXTYBho0TnCDljEvktwKg7e02FyUgwM1xSJSYTm3IDVNSyfWiZ4H51vOUz80ulIUoHtu5WHPdvzP3vdokRbW5akN/rE2T6ws0CuTdd+LKyxdIuuJP3MseMG8HIf9C/4wWXkxWB9amCzujsmBJuaEduKX0OP7T8XyOZoQ7A0BjMl8eqxx/rOmr6O0ztAgMBAAEwAwYBAAMBAA==</certificate>
+3.	<assertion>http://confluenceserver:8090/login.jsp</assertion>
+4.	<issuer>http://confluenceserver:8090/secure/Dashboard.jspa</issuer>
+5.	<ssotarget>https://app.onelogin.com/saml/signon/409983</ssotarget>
+6.	</config> 
+
+7.	Copy conf_onelogin.xml into CONFLUENCE_INSTALL and CONFLUENCE_INSTALL/bin. The default location of the CONFLUENCE_INSTALL directory depends on the installation platform: Linux: /opt/atlassian/confluence Windows: c:\Program Files\Atlassian\Confluence Your installation directory may be different. 
+8.	Copy customauth-conf5-0.6.jar into CONFLUENCE_INSTALL/confluence/WEB-INF/lib.
+9.	Edit CONFLUENCE_INSTALL/confluence/WEB-INF/classes/seraph-config.xml.
+	a.	Modify the login.url parameter. Find <param-name>link.login.url</param-name> and make sure the corresponding <param-value> value is: <param-value>/login.jsp?os_destination=${originalurl}</param-value>
+	b.	Comment out (<!-- -->) the following line: <authenticator class="com.atlassian.confluence.user.ConfluenceAuthenticator"/>
+	c.	Add the following line before the <services> tag: <authenticator class="com.onelogin.confluence.saml.SSOAuthenticator"/>
+
+10.	Edit CONFLUENCE_INSTALL/confluence/confluence/login.vm. Immediately before the </head> closing tag, add the following:
+	  #if(!$req.getParameter("samlInvalid"))
+	    #if( !$req.getParameter("SAMLResponse") && !$req.getParameter("oneloginreq") && !$req.getParameter("logout"))
+	                    $res.sendRedirect($req.getSession().getAttribute("reqString"));
+	    #end 
+	  #end   
+
+11.	Edit CONFLUENCE_INSTALL/confluence/confluence/dashboard/dashboard.vm. Find the line <title>$action.getText("title.dashboard")</title> and add the following immediately after:
+	  #if( $req.getSession() && $req.getSession().getAttribute("redirect") )
+	          $req.getSession().setAttribute("redirect",false)
+	           $res.sendRedirect($req.getSession().getAttribute("os_destination"))
+	  #end 
+12.	Restart the Atlassian Confluence service.
+

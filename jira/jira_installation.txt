@@ -1,0 +1,53 @@
+Installing and configuring the JIRA plugin
+1.	Copy the following files to the machine that hosts your JIRA service: customauth-jira-6.1.2.jar jira_onelogin.xml Ensure that your JIRA_USER has read permission on these files. To perform this configuration, you must be logged in as a user with write permission on these files and the files in your JIRA_INSTALL directory. 
+
+2.	Edit jira_onelogin.xml to add the X.509 certificate and SAML 2.0 Endpoint that you copied above. Paste the certificate between the <certificate></certificate> tags, removing all line feeds or carriage returns in the certificate value. Paste the SAML 2.0 Endpoint between the <ssotarget></ssotarget> tags. <config><certificate>MIICMTCCAiWgAwIBAgIBATADBgEAMGcxCzAJBgNVBAYTAlVTMRMwEQYDVQQIDApDYWxpZm9ybmlhMRUwEwYDVQQHDAMA8GA1UECgwIT25lTG9naW4xGTAXBgNVBAMMEGFwcC5vbmVsb2dpbi5jb20wggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQDKvNTqqXMUv2kbVIaAeov5qOaVrbDQwj/65aaCs8CuXwC1Ks69Z3/D5qGHLDqVCR7+BhbVEiZRK/tb/LcW1qsFySXlgbGY5zqvHXjQ2ChYDofpTV8iMr7klHBXweP+pxvrknsmMUxlmaH7gcvRBN9UkdXds0pXTYBho0TnCDljEvktwKg7e02FyUgwM1xSJSYTm3IDVNSyfWiZ4H51vOUz80ulIUoHtu5WHPdvzP3vdokRbW5akN/rE2T6ws0CuTdd+LKyxdIuuJP3MseMG8HIf9C/4wWXkxWB9amCzujsmBJuaEduKX0OP7T8XyOZoQ7A0BjMl8eqxx/rOmr6O0ztAgMBAAEwAwYBAAMBAA==</certificate>
+
+<assertion>http://server1:8080/login.jsp</assertion>
+<issuer>http://server1:8080/secure/Dashboard.jspa</issuer>
+<ssotarget>https://app.onelogin.com/saml/signon/49097</ssotarget>
+</config> 
+
+6.	Copy jira_onelogin.xml into JIRA_INSTALL and JIRA_INSTALL/bin. The default location of the JIRA_INSTALL directory depends on the installation platform: Linux: /opt/atlassian/jira Windows: c:\Program Files\Atlassian\JIRA Your installation directory may be different. 
+
+7.	Copy customauth-jira-6.1.2.jar into JIRA_INSTALL/atlassian-jira/WEB-INF/lib.
+
+8.	Edit JIRA_INSTALL/atlassian-jira/WEB-INF/classes/seraph-config.xml.
+	a.	Modify the link.login.url parameter. Find <param-name>link.login.url</param-name> and make sure the corresponding <param-value> value is: <param-value>/login.jsp?os_destination=${originalurl}</param-value>
+	b.	Comment out (<!-- -->) the following line: <authenticator class="com.atlassian.jira.security.login.JiraSeraphAuthenticator"/>
+	c.	Add the following line before the <service> tag: <authenticator class="com.onelogin.jira.saml.SSOAuthenticator"/> 
+
+9.	Edit JIRA_INSTALL/atlassian-jira/includes/loginform.jsp.
+
+Find the following line: <%@ page import="com.atlassian.jira.web.filters.JiraLoginInterceptor" %>
+Add the following immediately after: <%@ page import= "com.onelogin.jira.saml.SSOAuthenticator" %>
+
+Find the following line: request.setAttribute("loggedInUser", jiraAuthenticationContext.getLoggedInUser() == null ? null : jiraAuthenticationContext.getLoggedInUser().getDisplayName());
+Add the following immediately after: if(request.getParameter("SAMLResponse") == null) {
+      String redirectURL = 
+      request.getSession().getAttribute("reqString").toString();
+      response.sendRedirect(redirectURL);
+   } else {
+      if(jiraAuthenticationContext.getLoggedInUser() != null) {
+          if(request.getSession().getAttribute("os_destination") != null) {
+              String os_destination = 
+                  request.getSession().getAttribute("os_destination").toString();
+                  response.sendRedirect(os_destination);
+          } else {
+              response.sendRedirect("/");
+          }
+     }
+} 
+
+10.	Edit JIRA_INSTALL/atlassian-jira/secure/views/dashboard.jsp. 
+Find the line wrm.requireResourcesForContext("jira.dashboard"); 
+and add the following immediately after (and before the line with %>):
+
+if(request.getSession().getAttribute("os_destination") != null) {
+  String os_destination =  request.getSession().getAttribute("os_destination").toString();
+    request.getSession().setAttribute("os_destination",null);
+     response.sendRedirect(os_destination);
+} 
+
+11.	Restart the Atlassian JIRA service.
+
