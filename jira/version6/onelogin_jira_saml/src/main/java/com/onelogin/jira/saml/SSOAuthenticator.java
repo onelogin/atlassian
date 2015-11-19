@@ -8,8 +8,7 @@ import javax.servlet.http.HttpServletResponse;
 
 import org.apache.log4j.Logger;
 
-import com.atlassian.crowd.embedded.api.User;
-import com.atlassian.jira.user.UserUtils;
+import com.atlassian.jira.component.ComponentAccessor;
 import com.atlassian.jira.util.UrlValidator;
 import com.atlassian.seraph.auth.AuthenticatorException;
 import com.atlassian.seraph.auth.DefaultAuthenticator;
@@ -187,8 +186,7 @@ public class SSOAuthenticator extends DefaultAuthenticator {
 
 	@Override
 	protected Principal getUser(String username) {
-		User user = UserUtils.getUser(username);
-		return user;
+		return ComponentAccessor.getUserManager().getUserByName(username);
 	}
 
 	@Override
