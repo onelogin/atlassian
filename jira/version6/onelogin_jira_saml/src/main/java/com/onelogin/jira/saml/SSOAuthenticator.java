@@ -2,6 +2,7 @@ package com.onelogin.jira.saml;
 
 import java.security.Principal;
 import java.util.HashMap;
+import java.util.Collection;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -12,11 +13,13 @@ import com.atlassian.jira.component.ComponentAccessor;
 import com.atlassian.jira.util.UrlValidator;
 import com.atlassian.seraph.auth.AuthenticatorException;
 import com.atlassian.seraph.auth.DefaultAuthenticator;
+import com.atlassian.jira.security.login.JiraSeraphAuthenticator;
+import com.atlassian.jira.security.groups.GroupManager;
 import com.onelogin.AccountSettings;
 import com.onelogin.AppSettings;
 import com.onelogin.saml.Response;
 
-public class SSOAuthenticator extends DefaultAuthenticator {
+public class SSOAuthenticator extends JiraSeraphAuthenticator {
 
 	/**
 	 * 
@@ -26,7 +29,10 @@ public class SSOAuthenticator extends DefaultAuthenticator {
 	private static final Logger log = Logger.getLogger(SSOAuthenticator.class);
 
 	public String reqString = "/";
-
+ 
+	// Members of this JIRA group are allowed to authenticate against JIRA and bypass OneLogin.  
+	private String WHITELISTED_GROUP = "onelogin-whitelist"; 
+ 
 	public SSOAuthenticator() {
 	}
 
@@ -192,7 +198,31 @@ public class SSOAuthenticator extends DefaultAuthenticator {
 	@Override
 	protected boolean authenticate(Principal prncpl, String string)
 			throws AuthenticatorException {
-		log.info("authenticate");
-		return false;
+		String username = prncpl.getName();
+  		log.debug(String.format("Checking whether %s is whitelisted.", username));
+		if (isUserWhitelisted(username)) {
+  			log.debug(String.format("User %s is whitelisted.", username));
+  			return super.authenticate(prncpl, string);
+  		}
+		
+  		return false;
+	}
+
+  	// Checks whether user is a member of the whitelisted JIRA group
+	private boolean isUserWhitelisted(String username) {
+		if (username == null || username.isEmpty()) {
+			return false;
+		}
+
+		GroupManager groupManager = ComponentAccessor.getGroupManager();
+		Collection<String> userGroups = groupManager.getGroupNamesForUser(username);
+		log.debug(String.format("User: %s is a member of: %s ", username, userGroups.toString()));
+
+		boolean isAllowed = false;
+		if (userGroups.contains(WHITELISTED_GROUP)) {
+			log.debug(String.format("User is a memeber of whitelisted group: %s.", WHITELISTED_GROUP));
+			isAllowed = true;
+		}
+		return isAllowed;
 	}
 }
