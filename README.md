@@ -8,6 +8,8 @@ Documentation for setting up a particular Atlassian project is included in each 
 That is to say documentation for setting up and configuring Confluence is in the confluence directory. 
 Documentation for Jira is in the Jira directories.
 
+OneLogin will review and test changes proposed by the opensource community on a qarterly basis. 
+
 
 Builds
 -----
